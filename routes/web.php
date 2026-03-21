@@ -7,18 +7,18 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\SalesTeam\RxController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-Route::get('/login', [AuthController::class , 'login'])->name('login');
+// Route::get('/', function () {
+//     return view('welcome');
+// });
+Route::get('/', [AuthController::class , 'login'])->name('login');
 Route::post('/login', [AuthController::class , 'loginPost'])->name('login.submit');
 Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [AuthController::class , 'logout'])->name('logout');
 
     Route::middleware(['role:admin'])->group(function () {
             Route::get('/admin-dashboard', [AdminController::class , 'dashboard'])->name('admin.dashboard');
-            Route::get('/admin/dashboard-data', [AdminController::class, 'getDashboardData'])->name('admin.dashboard.data');
-            Route::get('/admin/dashboard-export', [AdminController::class, 'exportDashboard'])->name('admin.dashboard.export');
+            Route::get('/admin/dashboard-data', [AdminController::class , 'getDashboardData'])->name('admin.dashboard.data');
+            Route::get('/admin/dashboard-export', [AdminController::class , 'exportDashboard'])->name('admin.dashboard.export');
 
             // Dynamic Data Fetching Routes
             Route::get('/get-zones', [SalesTeamController::class , 'getZones']);
