@@ -1,0 +1,43 @@
+name: Suntulan Rx Deployment Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy files to Droplet via SCP
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DO_HOST_PROD }}
+          username: root
+          key: ${{ secrets.DO_SSH_KEY_PROD }}
+          source: "."
+          target: "/var/www/rx"
+
+      - name: SSH and deploy application
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.DO_HOST_PROD }}
+          username: root
+          key: ${{ secrets.DO_SSH_KEY_PROD }}
+          script: |
+            cd /var/www/rx
+            composer install --no-dev --optimize-autoloader
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan config:clear
+            php artisan route:clear
+            php artisan view:clear
+            php artisan storage:link
+            chown -R www-data:www-data /var/www/rx
+            chmod -R 775 storage bootstrap/cache
