@@ -13,23 +13,15 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $password = \Illuminate\Support\Str::random(10);
-        
+        $username = 'Admin' . '-' . \Illuminate\Support\Str::random(5);
+
         \App\Models\User::create([
-            'name' => 'Admin User',
+            'name' => 'Admin',
             'password' => \Illuminate\Support\Facades\Hash::make($password),
             'plain_password' => $password,
             'role' => 'admin',
-            'username' => 'admin',
-            'employee_id' => 'EMP001'
-        ]);
-
-        \App\Models\User::create([
-            'name' => 'Sales User',
-            'password' => \Illuminate\Support\Facades\Hash::make($password),
-            'plain_password' => $password,
-            'role' => 'sales_team',
-            'username' => 'sales',
-            'employee_id' => 'EMP002'
+            'username' => $username,
+            'employee_id' => 'ADM-001'
         ]);
     }
 }
