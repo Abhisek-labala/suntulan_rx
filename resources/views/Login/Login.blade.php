@@ -1,4 +1,4 @@
-@include('login.header')
+@include('Login.header')
 <!-- Main Wrapper -->
 <div class="main-wrapper login-body">
     <div class="login-wrapper">
@@ -40,4 +40,4 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- /Main Wrapper -->
-@include('login.footer')
+@include('Login.footer')
