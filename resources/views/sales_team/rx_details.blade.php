@@ -94,11 +94,11 @@
                                     </div>
                                     <div class="col-md-3 text-right">
                                         <a href="{{ route('rx.export', array_merge(request()->only('from_date','to_date'), ['format'=>'pdf'])) }}"
-                                           class="btn btn-danger px-3 mr-2">
+                                           class="btn btn-danger px-3 mr-2" target="_blank">
                                             <i class="fa fa-file-pdf-o mr-1"></i> PDF
                                         </a>
                                         <a href="{{ route('rx.export', array_merge(request()->only('from_date','to_date'), ['format'=>'excel'])) }}"
-                                           class="btn btn-success px-3">
+                                           class="btn btn-success px-3" target="_blank">
                                             <i class="fa fa-file-excel-o mr-1"></i> Excel
                                         </a>
                                     </div>

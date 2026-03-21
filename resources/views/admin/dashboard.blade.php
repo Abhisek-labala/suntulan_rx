@@ -187,7 +187,7 @@
     function exportData(format) {
         var formData = $('#pmdashboard').serialize();
         var url = "{{ route('admin.dashboard.export') }}?" + formData + "&format=" + format;
-        window.location.href = url;
+        window.open(url, '_blank');
     }
 </script>
 
