@@ -87,14 +87,20 @@ class RxController extends Controller
         $rxDetails = $query->with(['zone', 'region', 'hq'])->orderBy('date', 'desc')->get();
         $format = $request->get('format', 'excel');
 
-        $fromLabel = $request->from_date ? \Carbon\Carbon::parse($request->from_date)->format('d-m-Y') : 'All';
-        $toLabel   = $request->to_date   ? \Carbon\Carbon::parse($request->to_date)->format('d-m-Y')   : 'All';
-        $filename  = 'RX_Report_' . $fromLabel . '_to_' . $toLabel;
+        $fromLabel = $request->from_date ?\Carbon\Carbon::parse($request->from_date)->format('d-m-Y') : 'All';
+        $toLabel = $request->to_date ?\Carbon\Carbon::parse($request->to_date)->format('d-m-Y') : 'All';
+        $filename = 'RX_Report_' . $fromLabel . '_to_' . $toLabel;
 
         if ($format === 'pdf') {
-            $html  = '<html><head>';
+            $logoSrc = '';
+            if (file_exists(public_path('uploads/logo/Suntulan_logo.png'))) {
+                $logoData = base64_encode(file_get_contents(public_path('uploads/logo/Suntulan_logo.png')));
+                $logoSrc = 'data:image/png;base64,' . $logoData;
+            }
+
+            $html = '<html><head>';
             $html .= '<style>body{font-family:Arial,sans-serif;font-size:12px;}';
-            $html .= 'h2{color:#333;text-align:center;}';
+            $html .= 'h2{color:#333;text-align:center;margin-top:10px;}';
             $html .= 'p.subtitle{text-align:center;color:#666;margin-top:-10px;}';
             $html .= 'table{width:100%;border-collapse:collapse;margin-top:16px;}';
             $html .= 'th{background:#AE3B26;color:#fff;padding:8px;text-align:left;}';
@@ -102,6 +108,11 @@ class RxController extends Controller
             $html .= 'tr:nth-child(even) td{background:#f8f8f8;}';
             $html .= '.total td{font-weight:bold;background:#fef3e2;}';
             $html .= '</style></head><body>';
+
+            if ($logoSrc) {
+                $html .= '<div style="text-align:center;"><img src="' . $logoSrc . '" height="60"></div>';
+            }
+
             $html .= '<h2>RX Report — ' . htmlspecialchars($user->name) . '</h2>';
             $html .= '<p class="subtitle">Period: ' . $fromLabel . ' &nbsp;to&nbsp; ' . $toLabel . '</p>';
             $html .= '<table>';
@@ -109,9 +120,9 @@ class RxController extends Controller
             foreach ($rxDetails as $rx) {
                 $html .= '<tr>';
                 $html .= '<td>' . \Carbon\Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->zone->name   ?? 'N/A') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->zone->name ?? 'N/A') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->region->name ?? 'N/A') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->hq->name     ?? 'N/A') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->hq->name ?? 'N/A') . '</td>';
                 $html .= '<td>' . $rx->rx_count . '</td>';
                 $html .= '</tr>';
             }
@@ -125,7 +136,7 @@ class RxController extends Controller
 
         // Excel (CSV)
         $headers = [
-            'Content-Type'        => 'text/csv',
+            'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
         ];
         $callback = function () use ($rxDetails, $user, $fromLabel, $toLabel) {
@@ -139,9 +150,9 @@ class RxController extends Controller
             foreach ($rxDetails as $rx) {
                 fputcsv($handle, [
                     \Carbon\Carbon::parse($rx->date)->format('d-m-Y'),
-                    $rx->zone->name   ?? 'N/A',
+                    $rx->zone->name ?? 'N/A',
                     $rx->region->name ?? 'N/A',
-                    $rx->hq->name     ?? 'N/A',
+                    $rx->hq->name ?? 'N/A',
                     $rx->rx_count,
                 ]);
             }
