@@ -100,22 +100,31 @@ class RxController extends Controller
 
             $html = '<html><head>';
             $html .= '<style>body{font-family:Arial,sans-serif;font-size:12px;}';
-            $html .= 'h2{color:#333;text-align:center;margin-top:10px;}';
-            $html .= 'p.subtitle{text-align:center;color:#666;margin-top:-10px;}';
-            $html .= 'table{width:100%;border-collapse:collapse;margin-top:16px;}';
+            $html .= '.header-tbl{width:100%;border:0;margin-bottom:10px;}';
+            $html .= '.logo-cell{width:70px;text-align:left;}';
+            $html .= '.title-cell{text-align:center;}';
+            $html .= 'h2{color:#333;text-align:center;}';
+            $html .= 'p.subtitle{text-align:center;color:#666;}';
+            $html .= 'table.data-tbl{width:100%;border-collapse:collapse;margin-top:16px;}';
             $html .= 'th{background:#AE3B26;color:#fff;padding:8px;text-align:left;}';
             $html .= 'td{padding:7px;border-bottom:1px solid #ddd;}';
             $html .= 'tr:nth-child(even) td{background:#f8f8f8;}';
             $html .= '.total td{font-weight:bold;background:#fef3e2;}';
             $html .= '</style></head><body>';
-
+            
+            // Layout header with logo
+            $html .= '<table class="header-tbl"><tr>';
             if ($logoSrc) {
-                $html .= '<div style="text-align:center;"><img src="' . $logoSrc . '" height="60"></div>';
+                $html .= '<td class="logo-cell"><img src="' . $logoSrc . '" height="50"></td>';
             }
-
+            $html .= '<td class="title-cell">';
             $html .= '<h2>RX Report — ' . htmlspecialchars($user->name) . '</h2>';
             $html .= '<p class="subtitle">Period: ' . $fromLabel . ' &nbsp;to&nbsp; ' . $toLabel . '</p>';
-            $html .= '<table>';
+            $html .= '</td>';
+            $html .= '<td style="width:70px;"></td>'; // spacer to center title
+            $html .= '</tr></table>';
+
+            $html .= '<table class="data-tbl">';
             $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>RX Count</th></tr>';
             foreach ($rxDetails as $rx) {
                 $html .= '<tr>';
