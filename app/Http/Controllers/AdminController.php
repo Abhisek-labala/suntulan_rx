@@ -152,12 +152,12 @@ class AdminController extends Controller
                 $total += $rx->rx_count;
                 $html .= '<tr>';
                 $html .= '<td>' . Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->user->prefix ?? '—') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->user->name ?? '—') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->user->designation->name ?? '—') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->hq->name ?? ($rx->user->hq->name ?? '—')) . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->region->name ?? ($rx->user->region->name ?? '—')) . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->zone->name ?? ($rx->user->zone->name ?? '—')) . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->user->prefix ?? '-') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->user->name ?? '-') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->user->designation->name ?? '-') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->hq->name ?? ($rx->user->hq->name ?? '-')) . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->region->name ?? ($rx->user->region->name ?? '-')) . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->zone->name ?? ($rx->user->zone->name ?? '-')) . '</td>';
                 $html .= '<td>' . $rx->rx_count . '</td>';
                 $html .= '</tr>';
             }
@@ -188,12 +188,12 @@ class AdminController extends Controller
                 $total += $rx->rx_count;
                 fputcsv($handle, [
                     Carbon::parse($rx->date)->format('d-m-Y'),
-                    $rx->user->prefix ?? '—',
-                    $rx->user->name ?? '—',
-                    $rx->user->designation->name ?? '—',
-                    $rx->hq->name ?? ($rx->user->hq->name ?? '—'),
-                    $rx->region->name ?? ($rx->user->region->name ?? '—'),
-                    $rx->zone->name ?? ($rx->user->zone->name ?? '—'),
+                    $rx->user->prefix ?? '-',
+                    $rx->user->name ?? '-',
+                    $rx->user->designation->name ?? '-',
+                    $rx->hq->name ?? ($rx->user->hq->name ?? '-'),
+                    $rx->region->name ?? ($rx->user->region->name ?? '-'),
+                    $rx->zone->name ?? ($rx->user->zone->name ?? '-'),
                     $rx->rx_count,
                 ]);
             }

@@ -118,7 +118,7 @@ class RxController extends Controller
                 $html .= '<td class="logo-cell"><img src="' . $logoSrc . '" height="50"></td>';
             }
             $html .= '<td class="title-cell">';
-            $html .= '<h2>RX Report — ' . htmlspecialchars($user->name) . '</h2>';
+            $html .= '<h2>RX Report - ' . htmlspecialchars($user->name) . '</h2>';
             $html .= '<p class="subtitle">Period: ' . $fromLabel . ' &nbsp;to&nbsp; ' . $toLabel . '</p>';
             $html .= '</td>';
             $html .= '<td style="width:70px;"></td>'; // spacer to center title
