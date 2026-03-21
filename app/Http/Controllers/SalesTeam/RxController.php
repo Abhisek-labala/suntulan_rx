@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Http\Controllers\SalesTeam;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+class RxController extends Controller
+{
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+        $query = \App\Models\RxDetail::where('user_id', $user->id);
+
+        if ($request->filled('from_date')) {
+            $query->where('date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->where('date', '<=', $request->to_date);
+        }
+
+        $rxDetails = $query->with(['zone', 'region', 'hq'])->orderBy('date', 'desc')->get();
+        return view('sales_team.rx_details', compact('rxDetails', 'user'));
+    }
+
+    public function store(Request $request)
+    {
+        $user = auth()->user();
+        $request->validate([
+            'rx_count' => 'required|integer|min:1',
+            'date' => 'required|date'
+        ]);
+
+        // Prevention of duplicates for the same date
+        $exists = \App\Models\RxDetail::where('user_id', $user->id)
+            ->where('date', $request->date)
+            ->first();
+
+        if ($exists) {
+            return redirect()->back()
+                ->with('error', 'You have already logged an RX count for this date. You can edit the existing record in the table below.');
+        }
+
+        \App\Models\RxDetail::create(array_merge($request->all(), [
+            'user_id' => $user->id,
+            'zone_id' => $user->zone_id,
+            'region_id' => $user->region_id,
+            'hq_id' => $user->hq_id
+        ]));
+
+        return redirect()->back()->with('success', 'RX Detail added successfully');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'rx_count' => 'required|integer|min:1',
+            'date' => 'required|date'
+        ]);
+
+        $rx = \App\Models\RxDetail::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $rx->update($request->all());
+
+        return redirect()->back()->with('success', 'RX Detail updated successfully');
+    }
+
+    public function destroy($id)
+    {
+        $rx = \App\Models\RxDetail::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $rx->delete();
+        return redirect()->back()->with('success', 'RX Detail deleted successfully');
+    }
+
+    public function export(Request $request)
+    {
+        $user = auth()->user();
+        $query = \App\Models\RxDetail::where('user_id', $user->id);
+
+        if ($request->filled('from_date')) {
+            $query->where('date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->where('date', '<=', $request->to_date);
+        }
+
+        $rxDetails = $query->with(['zone', 'region', 'hq'])->orderBy('date', 'desc')->get();
+        $format = $request->get('format', 'excel');
+
+        $fromLabel = $request->from_date ? \Carbon\Carbon::parse($request->from_date)->format('d-m-Y') : 'All';
+        $toLabel   = $request->to_date   ? \Carbon\Carbon::parse($request->to_date)->format('d-m-Y')   : 'All';
+        $filename  = 'RX_Report_' . $fromLabel . '_to_' . $toLabel;
+
+        if ($format === 'pdf') {
+            $html  = '<html><head>';
+            $html .= '<style>body{font-family:Arial,sans-serif;font-size:12px;}';
+            $html .= 'h2{color:#333;text-align:center;}';
+            $html .= 'p.subtitle{text-align:center;color:#666;margin-top:-10px;}';
+            $html .= 'table{width:100%;border-collapse:collapse;margin-top:16px;}';
+            $html .= 'th{background:#AE3B26;color:#fff;padding:8px;text-align:left;}';
+            $html .= 'td{padding:7px;border-bottom:1px solid #ddd;}';
+            $html .= 'tr:nth-child(even) td{background:#f8f8f8;}';
+            $html .= '.total td{font-weight:bold;background:#fef3e2;}';
+            $html .= '</style></head><body>';
+            $html .= '<h2>RX Report — ' . htmlspecialchars($user->name) . '</h2>';
+            $html .= '<p class="subtitle">Period: ' . $fromLabel . ' &nbsp;to&nbsp; ' . $toLabel . '</p>';
+            $html .= '<table>';
+            $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>RX Count</th></tr>';
+            foreach ($rxDetails as $rx) {
+                $html .= '<tr>';
+                $html .= '<td>' . \Carbon\Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->zone->name   ?? 'N/A') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->region->name ?? 'N/A') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->hq->name     ?? 'N/A') . '</td>';
+                $html .= '<td>' . $rx->rx_count . '</td>';
+                $html .= '</tr>';
+            }
+            $html .= '<tr class="total"><td colspan="4" style="text-align:right;">Total RX</td>';
+            $html .= '<td>' . $rxDetails->sum('rx_count') . '</td></tr>';
+            $html .= '</table></body></html>';
+
+            $pdf = Pdf::loadHTML($html)->setPaper('a4', 'landscape');
+            return $pdf->download($filename . '.pdf');
+        }
+
+        // Excel (CSV)
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+        ];
+        $callback = function () use ($rxDetails, $user, $fromLabel, $toLabel) {
+            $handle = fopen('php://output', 'w');
+            // Title rows
+            fputcsv($handle, ['RX Report — ' . $user->name]);
+            fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
+            fputcsv($handle, []);
+            // Header
+            fputcsv($handle, ['Date', 'Zone', 'Region', 'HQ', 'RX Count']);
+            foreach ($rxDetails as $rx) {
+                fputcsv($handle, [
+                    \Carbon\Carbon::parse($rx->date)->format('d-m-Y'),
+                    $rx->zone->name   ?? 'N/A',
+                    $rx->region->name ?? 'N/A',
+                    $rx->hq->name     ?? 'N/A',
+                    $rx->rx_count,
+                ]);
+            }
+            fputcsv($handle, []);
+            fputcsv($handle, ['', '', '', 'Total RX', $rxDetails->sum('rx_count')]);
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+}

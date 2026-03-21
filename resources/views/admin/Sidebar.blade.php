@@ -1,0 +1,41 @@
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-inner slimscroll">
+        <div id="sidebar-menu" class="sidebar-menu">
+            <ul>
+                <li>
+                    <a href="{{ route('admin.dashboard') }}">
+                        <i class="fa fa-home"></i> <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('sales-staff.index') }}">
+                        <i class="fa fa-users"></i> <span>Sales Staff</span>
+                    </a>
+                </li>
+                <li class="submenu">
+                    <a href="javascript:void(0);">
+                        <i class="fa fa-sitemap"></i> <span>Organizational Setup</span>
+                        <span class="menu-arrow"></span>
+                    </a>
+                    <ul style="display: none;">
+                        <li><a href="{{ route('zones.index') }}"><i class="fa fa-globe"></i> Zones</a></li>
+                        <li><a href="{{ route('regions.index') }}"><i class="fa fa-map-marker"></i> Regions</a></li>
+                        <li><a href="{{ route('hqs.index') }}"><i class="fa fa-building"></i> HQs</a></li>
+                        <li><a href="{{ route('designations.index') }}"><i class="fa fa-id-badge"></i> Designations</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                        @csrf
+                    </form>
+
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <i class="fa fa-sign-out" aria-hidden="true"></i>
+                        <span>Logout</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+</div>

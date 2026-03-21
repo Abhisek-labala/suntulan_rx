@@ -20,8 +20,16 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
-        'email',
+        'username',
         'password',
+        'plain_password',
+        'role',
+        'employee_id',
+        'prefix',
+        'designation_id',
+        'hq_id',
+        'region_id',
+        'zone_id',
     ];
 
     /**
@@ -42,8 +50,27 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function designation()
+    {
+        return $this->belongsTo(Designation::class);
+    }
+
+    public function hq()
+    {
+        return $this->belongsTo(Hq::class);
+    }
+
+    public function region()
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
     }
 }
