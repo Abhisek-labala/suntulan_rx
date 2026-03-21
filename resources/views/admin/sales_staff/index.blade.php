@@ -6,11 +6,11 @@
             <div class="page-header">
                 <div class="row align-items-center">
                     <div class="col">
-                        <h3 class="page-title">Sales Staff Management</h3>
+                        <h3 class="page-title">Sales Team Management</h3>
                     </div>
                     <div class="col-auto">
-                        <a href="{{ route('sales-staff.create') }}" class="btn btn-primary">
-                            <i class="fa fa-plus"></i> Add Staff
+                        <a href="{{ route('sales-team.create') }}" class="btn btn-primary">
+                            <i class="fa fa-plus"></i> Add Team Member
                         </a>
                     </div>
                 </div>
@@ -56,11 +56,11 @@
                                             </td>
                                             <td class="text-right">
                                                 <div class="actions">
-                                                    <a class="btn btn-sm bg-success-light mr-2" href="{{ route('sales-staff.edit', $member->id) }}">
+                                                    <a class="btn btn-sm bg-success-light mr-2" href="{{ route('sales-team.edit', $member->id) }}">
                                                         <i class="fa fa-pencil"></i> Edit
                                                     </a>
                                                     
-                                                    <form action="{{ route('sales-staff.destroy', $member->id) }}" method="POST" style="display:inline;" data-confirm="Are you sure you want to delete this staff member?">
+                                                    <form action="{{ route('sales-team.destroy', $member->id) }}" method="POST" style="display:inline;" data-confirm="Are you sure you want to delete this team member?">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" class="btn btn-sm bg-danger-light">

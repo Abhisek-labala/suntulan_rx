@@ -193,7 +193,7 @@
                     </div>
                     <div class="form-group mt-3">
                         <label>Date</label>
-                        <input type="date" name="date" id="edit_date" class="form-control" required>
+                        <input type="date" name="date" id="edit_date" class="form-control" required readonly>
                     </div>
                 </div>
                 <div class="modal-footer">

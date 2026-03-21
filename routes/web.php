@@ -26,13 +26,13 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/get-hqs', [SalesTeamController::class , 'getHqs']);
             Route::get('/get-designations', [SalesTeamController::class , 'getDesignations']);
 
-            // Staff Management
-            Route::get('/admin/sales-staff', [SalesTeamController::class , 'index'])->name('sales-staff.index');
-            Route::get('/admin/create-sales-staff', [SalesTeamController::class , 'create'])->name('sales-staff.create');
-            Route::post('/admin/store-sales-staff', [SalesTeamController::class , 'store'])->name('sales-staff.store');
-            Route::get('/admin/sales-staff/{id}/edit', [SalesTeamController::class , 'edit'])->name('sales-staff.edit');
-            Route::put('/admin/sales-staff/{id}', [SalesTeamController::class , 'update'])->name('sales-staff.update');
-            Route::delete('/admin/sales-staff/{id}', [SalesTeamController::class , 'destroy'])->name('sales-staff.destroy');
+            // Team Management
+            Route::get('/admin/sales-team', [SalesTeamController::class , 'index'])->name('sales-team.index');
+            Route::get('/admin/create-sales-team', [SalesTeamController::class , 'create'])->name('sales-team.create');
+            Route::post('/admin/store-sales-team', [SalesTeamController::class , 'store'])->name('sales-team.store');
+            Route::get('/admin/sales-team/{id}/edit', [SalesTeamController::class , 'edit'])->name('sales-team.edit');
+            Route::put('/admin/sales-team/{id}', [SalesTeamController::class , 'update'])->name('sales-team.update');
+            Route::delete('/admin/sales-team/{id}', [SalesTeamController::class , 'destroy'])->name('sales-team.destroy');
 
             // Master Data Management
             Route::group(['prefix' => 'admin/master'], function () {

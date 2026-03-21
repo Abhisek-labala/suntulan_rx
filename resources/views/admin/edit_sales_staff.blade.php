@@ -6,7 +6,7 @@
             <div class="page-header">
                 <div class="row">
                     <div class="col-sm-12">
-                        <h3 class="page-title">Edit Sales Staff</h3>
+                        <h3 class="page-title">Edit Sales Team Member</h3>
                     </div>
                 </div>
             </div>
@@ -15,10 +15,10 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-body">
-                            <form id="editStaffForm">
+                            <form id="editTeamForm">
                                 @csrf
                                 @method('PUT')
-                                <input type="hidden" id="staff_id" value="{{ $user->id }}">
+                                <input type="hidden" id="team_member_id" value="{{ $user->id }}">
                                 <div class="row">
                                     <!-- Personal Info -->
                                     <div class="col-md-2">
@@ -82,8 +82,8 @@
                                 </div>
 
                                 <div class="mt-4 text-center">
-                                    <button type="submit" class="btn btn-success btn-lg px-5">Update Staff Info</button>
-                                    <a href="{{ route('sales-staff.index') }}" class="btn btn-secondary btn-lg px-5 ml-2">Cancel</a>
+                                     <button type="submit" class="btn btn-success btn-lg px-5">Update Team Member Info</button>
+                                    <a href="{{ route('sales-team.index') }}" class="btn btn-secondary btn-lg px-5 ml-2">Cancel</a>
                                 </div>
                             </form>
                         </div>
@@ -167,13 +167,13 @@ $(document).ready(function() {
     });
 
     // Form Submission
-    $('#editStaffForm').submit(function(e) {
+    $('#editTeamForm').submit(function(e) {
         e.preventDefault();
-        const staffId = $('#staff_id').val();
+        const teamMemberId = $('#team_member_id').val();
         const formData = $(this).serialize();
         
         $.ajax({
-            url: `/admin/sales-staff/${staffId}`,
+            url: `/admin/sales-team/${teamMemberId}`,
             method: 'POST',
             data: formData,
             success: function(response) {
@@ -184,7 +184,7 @@ $(document).ready(function() {
                         icon: 'success',
                         confirmButtonText: 'Great'
                     }).then(() => {
-                        window.location.href = "{{ route('sales-staff.index') }}";
+                        window.location.href = "{{ route('sales-team.index') }}";
                     });
                 }
             },

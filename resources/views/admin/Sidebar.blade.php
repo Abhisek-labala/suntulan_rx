@@ -8,8 +8,8 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('sales-staff.index') }}">
-                        <i class="fa fa-users"></i> <span>Sales Staff</span>
+                    <a href="{{ route('sales-team.index') }}">
+                        <i class="fa fa-users"></i> <span>Sales Team</span>
                     </a>
                 </li>
                 <li class="submenu">

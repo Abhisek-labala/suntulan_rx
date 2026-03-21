@@ -6,7 +6,7 @@
             <div class="page-header">
                 <div class="row">
                     <div class="col-sm-12">
-                        <h3 class="page-title">Add Sales Staff</h3>
+                        <h3 class="page-title">Add Sales Team</h3>
                     </div>
                 </div>
             </div>
@@ -15,7 +15,7 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-body">
-                            <form id="createStaffForm">
+                            <form id="createTeamForm">
                                 @csrf
                                 <div class="row">
                                     <!-- Personal Info -->
@@ -80,7 +80,7 @@
                                 </div>
 
                                 <div class="mt-4 text-center">
-                                    <button type="submit" class="btn btn-primary btn-lg px-5">Generate Credentials & Create Staff</button>
+                                    <button type="submit" class="btn btn-primary btn-lg px-5">Generate Credentials & Create Team</button>
                                 </div>
                             </form>
                         </div>
@@ -152,18 +152,18 @@ $(document).ready(function() {
     });
 
     // Form Submission
-    $('#createStaffForm').submit(function(e) {
+    $('#createTeamForm').submit(function(e) {
         e.preventDefault();
         const formData = $(this).serialize();
         
         $.ajax({
-            url: "{{ route('sales-staff.store') }}",
+            url: "{{ route('sales-team.store') }}",
             method: 'POST',
             data: formData,
             success: function(response) {
                 if(response.success) {
                     Swal.fire({
-                        title: 'Staff Created Successfully!',
+                        title: 'Team Created Successfully!',
                         html: `
                             <div class="text-left mt-3">
                                 <p class="mb-2"><strong>Username:</strong> <code>${response.username}</code></p>
@@ -177,7 +177,7 @@ $(document).ready(function() {
                         allowOutsideClick: false
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.location.href = "{{ route('sales-staff.index') }}";
+                            window.location.href = "{{ route('sales-team.index') }}";
                         }
                     });
                 }

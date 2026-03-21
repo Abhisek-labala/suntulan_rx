@@ -66,7 +66,7 @@ class SalesTeamController extends Controller
 
         return response()->json([
             'success' => true, 
-            'message' => "Staff created successfully! Username: $username, Password: $password",
+            'message' => "Team member created successfully! Username: $username, Password: $password",
             'username' => $username,
             'password' => $password
         ]);
@@ -96,13 +96,13 @@ class SalesTeamController extends Controller
 
         return response()->json([
             'success' => true, 
-            'message' => "Staff member updated successfully!"
+            'message' => "Team member updated successfully!"
         ]);
     }
 
     public function destroy($id)
     {
         \App\Models\User::findOrFail($id)->delete();
-        return redirect()->back()->with('success', 'Staff member deleted successfully');
+        return redirect()->back()->with('success', 'Team member deleted successfully');
     }
 }
