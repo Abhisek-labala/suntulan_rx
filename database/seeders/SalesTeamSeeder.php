@@ -80,13 +80,15 @@ class SalesTeamSeeder extends Seeder
             // Generate a unique employee ID if not present
             $employeeId = 'ST' . str_pad($index + 1, 3, '0', STR_PAD_LEFT);
 
+            $password = Str::random(10);
+
             User::updateOrCreate(
                 ['username' => $username],
                 [
                     'name' => $data['name'],
                     'prefix' => $data['prefix'],
-                    'password' => Hash::make('password'),
-                    'plain_password' => 'password',
+                    'password' => Hash::make($password),
+                    'plain_password' => $password,
                     'role' => 'sales_team',
                     'employee_id' => $employeeId,
                     'designation_id' => $designation->id,

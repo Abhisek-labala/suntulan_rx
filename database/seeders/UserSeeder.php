@@ -12,7 +12,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $password = 'password';
+        $password = \Illuminate\Support\Str::random(10);
         
         \App\Models\User::create([
             'name' => 'Admin User',
