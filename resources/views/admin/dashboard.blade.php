@@ -83,9 +83,10 @@
 
                             <div class="card mt-3">
                                 <div class="card-body">
-                                    <table id="adminRxTable" class="table table-bordered table-striped datatable">
+                                    <table id="adminRxTable" class="table table-bordered table-striped">
                                         <thead>
                                             <tr>
+                                                <th>DATE</th>
                                                 <th>PREFIX</th>
                                                 <th>EMPLOYEE NAME</th>
                                                 <th>DESIGNATION</th>
@@ -112,7 +113,7 @@
         // Initialize DataTable
         var table = $('#adminRxTable').DataTable({
             processing: true,
-            serverSide: false, // We'll fetch all matching staff and count their RXs
+            serverSide: false,
             ajax: {
                 url: "{{ route('admin.dashboard.data') }}",
                 data: function(d) {
@@ -125,6 +126,7 @@
                 }
             },
             columns: [
+                { data: 'date' },
                 { data: 'prefix' },
                 { data: 'name' },
                 { data: 'designation' },
@@ -132,10 +134,6 @@
                 { data: 'region' },
                 { data: 'zone' },
                 { data: 'rx_count' }
-            ],
-            dom: 'Bfrtip',
-            buttons: [
-                'copy', 'csv', 'excel', 'pdf', 'print'
             ]
         });
 
@@ -145,8 +143,7 @@
         });
 
         // Dependent Dropdowns
-        $('#zone_id').change(function() {
-            var zoneId = $(this).val();
+        function updateRegions(zoneId) {
             $('#region_id').html('<option value=""> -- Select -- </option>');
             $('#hq_id').html('<option value=""> -- Select -- </option>');
             if (zoneId) {
@@ -160,10 +157,9 @@
                     }
                 });
             }
-        });
+        }
 
-        $('#region_id').change(function() {
-            var regionId = $(this).val();
+        function updateHqs(regionId) {
             $('#hq_id').html('<option value=""> -- Select -- </option>');
             if (regionId) {
                 $.ajax({
@@ -176,6 +172,14 @@
                     }
                 });
             }
+        }
+
+        $('#zone_id').change(function() {
+            updateRegions($(this).val());
+        });
+
+        $('#region_id').change(function() {
+            updateHqs($(this).val());
         });
     });
 

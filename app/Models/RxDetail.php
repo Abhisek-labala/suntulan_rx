@@ -28,4 +28,9 @@ class RxDetail extends Model
     {
         return $this->belongsTo(Hq::class);
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
