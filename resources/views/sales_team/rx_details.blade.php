@@ -51,7 +51,7 @@
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>Date</label>
-                                            <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                                            <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" min="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required readonly>
                                         </div>
                                     </div>
                                     <div class="col-md-12 mt-4 text-right">
