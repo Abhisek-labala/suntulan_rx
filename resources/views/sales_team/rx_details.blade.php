@@ -44,6 +44,12 @@
                                     </div>
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
+                                            <label>SC Name</label>
+                                            <input type="text" name="sc_name" class="form-control" placeholder="SC Name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <div class="form-group mb-0">
                                             <label>RX Count</label>
                                             <input type="number" name="rx_count" class="form-control" placeholder="0" required min="1">
                                         </div>
@@ -51,7 +57,7 @@
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>Date</label>
-                                            <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" min="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required readonly>
+                                            <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-12 mt-4 text-right">
@@ -122,6 +128,7 @@
                                             <th>Zone</th>
                                             <th>Region</th>
                                             <th>HQ</th>
+                                            <th>SC Name</th>
                                             <th>RX Count</th>
                                             <th class="no-export text-right">Actions</th>
                                         </tr>
@@ -133,12 +140,14 @@
                                             <td>{{ $rx->zone->name ?? 'N/A' }}</td>
                                             <td>{{ $rx->region->name ?? 'N/A' }}</td>
                                             <td>{{ $rx->hq->name ?? 'N/A' }}</td>
+                                            <td>{{ $rx->sc_name ?? 'N/A' }}</td>
                                             <td>{{ $rx->rx_count }}</td>
                                             <td class="text-right">
                                                 <div class="actions">
                                                     <a class="btn btn-sm bg-success-light mr-2 edit-rx" href="#"
                                                         data-id="{{ $rx->id }}"
                                                         data-count="{{ $rx->rx_count }}"
+                                                        data-sc_name="{{ $rx->sc_name }}"
                                                         data-date="{{ $rx->date }}">
                                                         <i class="fa fa-pencil"></i> Edit
                                                     </a>
@@ -157,7 +166,7 @@
                                     @if($rxDetails->count() > 0)
                                     <tfoot>
                                         <tr class="font-weight-bold">
-                                            <td colspan="4" class="text-right">Total RX</td>
+                                            <td colspan="5" class="text-right">Total RX</td>
                                             <td>{{ $rxDetails->sum('rx_count') }}</td>
                                             <td></td>
                                         </tr>
@@ -188,12 +197,16 @@
                 @method('PUT')
                 <div class="modal-body">
                     <div class="form-group">
+                        <label>SC Name</label>
+                        <input type="text" name="sc_name" id="edit_sc_name" class="form-control" required>
+                    </div>
+                    <div class="form-group mt-3">
                         <label>RX Count</label>
                         <input type="number" name="rx_count" id="edit_rx_count" class="form-control" required min="1">
                     </div>
                     <div class="form-group mt-3">
                         <label>Date</label>
-                        <input type="date" name="date" id="edit_date" class="form-control" required readonly>
+                        <input type="date" name="date" id="edit_date" class="form-control" required max="{{ date('Y-m-d') }}">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -222,6 +235,7 @@ $(document).ready(function() {
     $(document).on('click', '.edit-rx', function(e) {
         e.preventDefault();
         $('#edit_rx_count').val($(this).data('count'));
+        $('#edit_sc_name').val($(this).data('sc_name'));
         $('#edit_date').val($(this).data('date'));
         $('#editRXForm').attr('action', '/rx-details/' + $(this).data('id'));
         $('#editRXModal').modal('show');

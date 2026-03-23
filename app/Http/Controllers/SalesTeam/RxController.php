@@ -29,17 +29,19 @@ class RxController extends Controller
         $user = auth()->user();
         $request->validate([
             'rx_count' => 'required|integer|min:1',
-            'date' => 'required|date'
+            'sc_name' => 'required|string|max:255',
+            'date' => 'required|date|before_or_equal:today'
         ]);
 
-        // Prevention of duplicates for the same date
+        // Prevention of duplicates for the same date and SC Name (case-insensitive)
         $exists = \App\Models\RxDetail::where('user_id', $user->id)
             ->where('date', $request->date)
+            ->whereRaw('LOWER(sc_name) = ?', [strtolower($request->sc_name)])
             ->first();
 
         if ($exists) {
             return redirect()->back()
-                ->with('error', 'You have already logged an RX count for this date. You can edit the existing record in the table below.');
+                ->with('error', 'You have already logged an RX count for this Date and SC Name.');
         }
 
         \App\Models\RxDetail::create(array_merge($request->all(), [
@@ -56,8 +58,21 @@ class RxController extends Controller
     {
         $request->validate([
             'rx_count' => 'required|integer|min:1',
-            'date' => 'required|date'
+            'sc_name' => 'required|string|max:255',
+            'date' => 'required|date|before_or_equal:today'
         ]);
+
+        $user = auth()->user();
+        // Check for duplicate but exclude current record
+        $exists = \App\Models\RxDetail::where('user_id', $user->id)
+            ->where('date', $request->date)
+            ->whereRaw('LOWER(sc_name) = ?', [strtolower($request->sc_name)])
+            ->where('id', '!=', $id)
+            ->first();
+
+        if ($exists) {
+            return redirect()->back()->with('error', 'Another record already exists for this Date and SC Name.');
+        }
 
         $rx = \App\Models\RxDetail::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
         $rx->update($request->all());
@@ -125,17 +140,18 @@ class RxController extends Controller
             $html .= '</tr></table>';
 
             $html .= '<table class="data-tbl">';
-            $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>RX Count</th></tr>';
+            $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>SC Name</th><th>RX Count</th></tr>';
             foreach ($rxDetails as $rx) {
                 $html .= '<tr>';
                 $html .= '<td>' . \Carbon\Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->zone->name ?? 'N/A') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->region->name ?? 'N/A') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->hq->name ?? 'N/A') . '</td>';
+                $html .= '<td>' . htmlspecialchars($rx->sc_name ?? 'N/A') . '</td>';
                 $html .= '<td>' . $rx->rx_count . '</td>';
                 $html .= '</tr>';
             }
-            $html .= '<tr class="total"><td colspan="4" style="text-align:right;">Total RX</td>';
+            $html .= '<tr class="total"><td colspan="5" style="text-align:right;">Total RX</td>';
             $html .= '<td>' . $rxDetails->sum('rx_count') . '</td></tr>';
             $html .= '</table></body></html>';
 
@@ -155,18 +171,19 @@ class RxController extends Controller
             fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
             fputcsv($handle, []);
             // Header
-            fputcsv($handle, ['Date', 'Zone', 'Region', 'HQ', 'RX Count']);
+            fputcsv($handle, ['Date', 'Zone', 'Region', 'HQ', 'SC Name', 'RX Count']);
             foreach ($rxDetails as $rx) {
                 fputcsv($handle, [
                     \Carbon\Carbon::parse($rx->date)->format('d-m-Y'),
                     $rx->zone->name ?? 'N/A',
                     $rx->region->name ?? 'N/A',
                     $rx->hq->name ?? 'N/A',
+                    $rx->sc_name ?? 'N/A',
                     $rx->rx_count,
                 ]);
             }
             fputcsv($handle, []);
-            fputcsv($handle, ['', '', '', 'Total RX', $rxDetails->sum('rx_count')]);
+            fputcsv($handle, ['', '', '', '', 'Total RX', $rxDetails->sum('rx_count')]);
             fclose($handle);
         };
 

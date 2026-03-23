@@ -11,6 +11,7 @@ class RxDetail extends Model
         'zone_id',
         'region_id',
         'hq_id',
+        'sc_name',
         'rx_count',
         'date'
     ];
