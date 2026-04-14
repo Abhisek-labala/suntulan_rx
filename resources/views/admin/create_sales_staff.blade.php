@@ -47,6 +47,7 @@
                                         <div class="form-group">
                                             <label>Role</label>
                                             <select name="role" id="role" class="form-control" required>
+                                                <option value="">Select Role</option>
                                                 <option value="sales_team">FLE(HQ Access)</option>
                                                 <option value="TLM">TLM (Admin Access)</option>
                                                 <option value="SLM">SLM (Zone Access)</option>

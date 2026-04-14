@@ -49,6 +49,7 @@
                                         <div class="form-group">
                                             <label>Role</label>
                                             <select name="role" id="role" class="form-control" required>
+                                                <option value="">Select Role</option>
                                                 <option value="sales_team" {{ $user->role == 'sales_team' ? 'selected' : '' }}>FLE(HQ Access)</option>
                                                 <option value="TLM" {{ $user->role == 'TLM' ? 'selected' : '' }}>TLM (Admin Access)</option>
                                                 <option value="SLM" {{ $user->role == 'SLM' ? 'selected' : '' }}>SLM (Zone Access)</option>
