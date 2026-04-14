@@ -28,10 +28,16 @@ class RxController extends Controller
     {
         $user = auth()->user();
         $request->validate([
-            'rx_count' => 'required|integer|min:1',
+            'noveltreat_count' => 'required|integer|min:0',
+            'sematrinity_count' => 'required|integer|min:0',
             'sc_name' => 'required|string|max:255',
             'date' => 'required|date|before_or_equal:today'
         ]);
+
+        $rx_count = (int)$request->noveltreat_count + (int)$request->sematrinity_count;
+        if ($rx_count <= 0) {
+            return redirect()->back()->with('error', 'Total RX count must be greater than 0.');
+        }
 
         // Prevention of duplicates for the same date and SC Name (case-insensitive)
         $exists = \App\Models\RxDetail::where('user_id', $user->id)
@@ -48,7 +54,8 @@ class RxController extends Controller
             'user_id' => $user->id,
             'zone_id' => $user->zone_id,
             'region_id' => $user->region_id,
-            'hq_id' => $user->hq_id
+            'hq_id' => $user->hq_id,
+            'rx_count' => $rx_count
         ]));
 
         return redirect()->back()->with('success', 'RX Detail added successfully');
@@ -57,10 +64,16 @@ class RxController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'rx_count' => 'required|integer|min:1',
+            'noveltreat_count' => 'required|integer|min:0',
+            'sematrinity_count' => 'required|integer|min:0',
             'sc_name' => 'required|string|max:255',
             'date' => 'required|date|before_or_equal:today'
         ]);
+
+        $rx_count = (int)$request->noveltreat_count + (int)$request->sematrinity_count;
+        if ($rx_count <= 0) {
+            return redirect()->back()->with('error', 'Total RX count must be greater than 0.');
+        }
 
         $user = auth()->user();
         // Check for duplicate but exclude current record
@@ -75,7 +88,7 @@ class RxController extends Controller
         }
 
         $rx = \App\Models\RxDetail::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
-        $rx->update($request->all());
+        $rx->update(array_merge($request->all(), ['rx_count' => $rx_count]));
 
         return redirect()->back()->with('success', 'RX Detail updated successfully');
     }
@@ -140,7 +153,7 @@ class RxController extends Controller
             $html .= '</tr></table>';
 
             $html .= '<table class="data-tbl">';
-            $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>SC Name</th><th>RX Count</th></tr>';
+            $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>SC Name</th><th>Total RX</th><th>Noveltreat</th><th>Sematrinity</th></tr>';
             foreach ($rxDetails as $rx) {
                 $html .= '<tr>';
                 $html .= '<td>' . \Carbon\Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
@@ -148,11 +161,15 @@ class RxController extends Controller
                 $html .= '<td>' . htmlspecialchars($rx->region->name ?? 'N/A') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->hq->name ?? 'N/A') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->sc_name ?? 'N/A') . '</td>';
-                $html .= '<td>' . $rx->rx_count . '</td>';
+                $html .= '<td><strong>' . $rx->rx_count . '</strong></td>';
+                $html .= '<td>' . $rx->noveltreat_count . '</td>';
+                $html .= '<td>' . $rx->sematrinity_count . '</td>';
                 $html .= '</tr>';
             }
-            $html .= '<tr class="total"><td colspan="5" style="text-align:right;">Total RX</td>';
-            $html .= '<td>' . $rxDetails->sum('rx_count') . '</td></tr>';
+            $html .= '<tr class="total"><td colspan="5" style="text-align:right;">Sub-Totals</td>';
+            $html .= '<td>' . $rxDetails->sum('rx_count') . '</td>';
+            $html .= '<td>' . $rxDetails->sum('noveltreat_count') . '</td>';
+            $html .= '<td>' . $rxDetails->sum('sematrinity_count') . '</td></tr>';
             $html .= '</table></body></html>';
 
             $pdf = Pdf::loadHTML($html)->setPaper('a4', 'landscape');
@@ -171,7 +188,7 @@ class RxController extends Controller
             fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
             fputcsv($handle, []);
             // Header
-            fputcsv($handle, ['Date', 'Zone', 'Region', 'HQ', 'SC Name', 'RX Count']);
+            fputcsv($handle, ['Date', 'Zone', 'Region', 'HQ', 'SC Name', 'Total RX', 'Noveltreat', 'Sematrinity', 'Created On', 'Last Updated']);
             foreach ($rxDetails as $rx) {
                 fputcsv($handle, [
                     \Carbon\Carbon::parse($rx->date)->format('d-m-Y'),
@@ -180,10 +197,14 @@ class RxController extends Controller
                     $rx->hq->name ?? 'N/A',
                     $rx->sc_name ?? 'N/A',
                     $rx->rx_count,
+                    $rx->noveltreat_count,
+                    $rx->sematrinity_count,
+                    $rx->created_at->format('d-m-Y H:i:s'),
+                    $rx->updated_at->format('d-m-Y H:i:s'),
                 ]);
             }
             fputcsv($handle, []);
-            fputcsv($handle, ['', '', '', '', 'Total RX', $rxDetails->sum('rx_count')]);
+            fputcsv($handle, ['', '', '', '', 'Total Sums', $rxDetails->sum('rx_count'), $rxDetails->sum('noveltreat_count'), $rxDetails->sum('sematrinity_count')]);
             fclose($handle);
         };
 

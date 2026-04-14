@@ -16,10 +16,24 @@ class AdminController extends Controller
 {
     public function dashboard(Request $request)
     {
+        $user = auth()->user();
         $zones = Zone::orderBy('name')->get();
-        $regions = Region::orderBy('name')->get();
-        $hqs = Hq::orderBy('name')->get();
+        $regions = Region::orderBy('name');
+        $hqs = Hq::orderBy('name');
         $designations = Designation::orderBy('name')->get();
+
+        if ($user->role === 'SLM') {
+            $regions = $regions->where('zone_id', $user->zone_id);
+            $hqs = $hqs->whereHas('region', function($q) use ($user) {
+                $q->where('zone_id', $user->zone_id);
+            });
+        } elseif ($user->role === 'FLM') {
+            $regions = $regions->where('id', $user->region_id);
+            $hqs = $hqs->where('region_id', $user->region_id);
+        }
+
+        $regions = $regions->get();
+        $hqs = $hqs->get();
 
         return view('admin.dashboard', compact('zones', 'regions', 'hqs', 'designations'));
     }
@@ -30,9 +44,22 @@ class AdminController extends Controller
      */
     public function getDashboardData(Request $request)
     {
-        $query = RxDetail::with(['user.designation', 'user.zone', 'user.region', 'user.hq', 'zone', 'region', 'hq']);
+        $query = RxDetail::with(['user.designation', 'user.zone', 'user.region', 'user.hq', 'user.reportingTo.reportingTo', 'zone', 'region', 'hq']);
 
-        // --- Geography filters ---
+        $user = auth()->user();
+
+        // --- Reporting Hierarchy Filter ---
+        if ($user->role === 'SLM') {
+            $flmIds = User::where('reporting_to_id', $user->id)->pluck('id');
+            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
+            $subId = $flmIds->merge($fleIds)->push($user->id);
+            $query->whereIn('user_id', $subId);
+        } elseif ($user->role === 'FLM') {
+            $subId = User::where('reporting_to_id', $user->id)->pluck('id')->push($user->id);
+            $query->whereIn('user_id', $subId);
+        }
+
+        // --- Geography filters from request ---
         if ($request->filled('zone_id')) {
             $query->where('zone_id', $request->zone_id);
         }
@@ -57,15 +84,29 @@ class AdminController extends Controller
         $records = $query->orderBy('date', 'desc')->get();
 
         $data = $records->map(function ($rx) {
+            $flm = '-';
+            $slm = '-';
+
+            if ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
+                $flm = $rx->user->reportingTo->name ?? '-';
+                $slm = $rx->user->reportingTo->reportingTo->name ?? '-';
+            } elseif ($rx->user->role === 'FLM') {
+                $slm = $rx->user->reportingTo->name ?? '-';
+            }
+
             return [
-            'date' => Carbon::parse($rx->date)->format('d-m-Y'),
-            'prefix' => $rx->user->prefix ?? '—',
-            'name' => $rx->user->name ?? 'Unknown',
-            'designation' => $rx->user->designation->name ?? '—',
-            'hq' => $rx->hq->name ?? ($rx->user->hq->name ?? '—'),
-            'region' => $rx->region->name ?? ($rx->user->region->name ?? '—'),
-            'zone' => $rx->zone->name ?? ($rx->user->zone->name ?? '—'),
-            'rx_count' => (int)$rx->rx_count,
+                'date' => Carbon::parse($rx->date)->format('d-m-Y'),
+                'prefix' => $rx->user->prefix ?? '—',
+                'name' => $rx->user->name ?? 'Unknown',
+                'flm_name' => $flm,
+                'slm_name' => $slm,
+                'designation' => $rx->user->designation->name ?? '—',
+                'hq' => $rx->hq->name ?? ($rx->user->hq->name ?? '—'),
+                'region' => $rx->region->name ?? ($rx->user->region->name ?? '—'),
+                'zone' => $rx->zone->name ?? ($rx->user->zone->name ?? '—'),
+                'noveltreat_count' => (int)$rx->noveltreat_count,
+                'sematrinity_count' => (int)$rx->sematrinity_count,
+                'rx_count' => (int)$rx->rx_count,
             ];
         });
 
@@ -77,7 +118,20 @@ class AdminController extends Controller
      */
     public function exportDashboard(Request $request)
     {
-        $query = RxDetail::with(['user.designation', 'user.zone', 'user.region', 'user.hq', 'zone', 'region', 'hq']);
+        $query = RxDetail::with(['user.designation', 'user.zone', 'user.region', 'user.hq', 'user.reportingTo.reportingTo', 'zone', 'region', 'hq']);
+
+        $user = auth()->user();
+
+        // --- Reporting Hierarchy Filter ---
+        if ($user->role === 'SLM') {
+            $flmIds = User::where('reporting_to_id', $user->id)->pluck('id');
+            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
+            $subId = $flmIds->merge($fleIds)->push($user->id);
+            $query->whereIn('user_id', $subId);
+        } elseif ($user->role === 'FLM') {
+            $subId = User::where('reporting_to_id', $user->id)->pluck('id')->push($user->id);
+            $query->whereIn('user_id', $subId);
+        }
 
         if ($request->filled('zone_id')) {
             $query->where('zone_id', $request->zone_id);
@@ -145,25 +199,39 @@ class AdminController extends Controller
             $html .= '</tr></table>';
 
             $html .= '<table class="data-tbl">';
-            $html .= '<tr><th>DATE</th><th>PREFIX</th><th>EMPLOYEE NAME</th><th>DESIGNATION</th><th>HQ</th><th>REGION</th><th>ZONE</th><th>RX NO.</th></tr>';
+            $html .= '<tr><th>DATE</th><th>PREFIX</th><th>EMPLOYEE NAME</th><th>FLM</th><th>SLM</th><th>HQ</th><th>REGION</th><th>ZONE</th><th>TOTAL RX</th><th>NOVELTREAT</th><th>SEMATRINITY</th></tr>';
 
             $total = 0;
             foreach ($records as $rx) {
+                $flm = '-';
+                $slm = '-';
+                if ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
+                    $flm = $rx->user->reportingTo->name ?? '-';
+                    $slm = $rx->user->reportingTo->reportingTo->name ?? '-';
+                } elseif ($rx->user->role === 'FLM') {
+                    $slm = $rx->user->reportingTo->name ?? '-';
+                }
+
                 $total += $rx->rx_count;
                 $html .= '<tr>';
                 $html .= '<td>' . Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->user->prefix ?? '-') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->user->name ?? '-') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->user->designation->name ?? '-') . '</td>';
+                $html .= '<td>' . htmlspecialchars($flm) . '</td>';
+                $html .= '<td>' . htmlspecialchars($slm) . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->hq->name ?? ($rx->user->hq->name ?? '-')) . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->region->name ?? ($rx->user->region->name ?? '-')) . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->zone->name ?? ($rx->user->zone->name ?? '-')) . '</td>';
-                $html .= '<td>' . $rx->rx_count . '</td>';
+                $html .= '<td><strong>' . $rx->rx_count . '</strong></td>';
+                $html .= '<td>' . $rx->noveltreat_count . '</td>';
+                $html .= '<td>' . $rx->sematrinity_count . '</td>';
                 $html .= '</tr>';
             }
 
-            $html .= '<tr class="total"><td colspan="7" style="text-align:right;">Total RX Sum</td>';
-            $html .= '<td>' . $total . '</td></tr>';
+            $html .= '<tr class="total"><td colspan="8" style="text-align:right;">Total Sums</td>';
+            $html .= '<td>' . $total . '</td>';
+            $html .= '<td>' . $records->sum('noveltreat_count') . '</td>';
+            $html .= '<td>' . $records->sum('sematrinity_count') . '</td></tr>';
             $html .= '</table></body></html>';
 
             $pdf = Pdf::loadHTML($html)->setPaper('a4', 'landscape');
@@ -181,25 +249,219 @@ class AdminController extends Controller
             fputcsv($handle, ['Admin RX Detailed Report']);
             fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
             fputcsv($handle, []);
-            fputcsv($handle, ['DATE', 'PREFIX', 'EMPLOYEE NAME', 'DESIGNATION', 'HQ', 'REGION', 'ZONE', 'RX NO.']);
+            fputcsv($handle, ['DATE', 'PREFIX', 'EMPLOYEE NAME', 'FLM', 'SLM', 'HQ', 'REGION', 'ZONE', 'TOTAL RX', 'NOVELTREAT', 'SEMATRINITY', 'Created On', 'LAST UPDATED']);
 
             $total = 0;
             foreach ($records as $rx) {
+                $flm = '-';
+                $slm = '-';
+                if ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
+                    $flm = $rx->user->reportingTo->name ?? '-';
+                    $slm = $rx->user->reportingTo->reportingTo->name ?? '-';
+                } elseif ($rx->user->role === 'FLM') {
+                    $slm = $rx->user->reportingTo->name ?? '-';
+                }
+
                 $total += $rx->rx_count;
                 fputcsv($handle, [
                     Carbon::parse($rx->date)->format('d-m-Y'),
                     $rx->user->prefix ?? '-',
                     $rx->user->name ?? '-',
-                    $rx->user->designation->name ?? '-',
+                    $flm,
+                    $slm,
                     $rx->hq->name ?? ($rx->user->hq->name ?? '-'),
                     $rx->region->name ?? ($rx->user->region->name ?? '-'),
                     $rx->zone->name ?? ($rx->user->zone->name ?? '-'),
                     $rx->rx_count,
+                    $rx->noveltreat_count,
+                    $rx->sematrinity_count,
+                    $rx->created_at->format('d-m-Y H:i:s'),
+                    $rx->updated_at->format('d-m-Y H:i:s'),
                 ]);
             }
 
             fputcsv($handle, []);
-            fputcsv($handle, ['', '', '', '', '', '', 'Total Sum', $total]);
+            fputcsv($handle, ['', '', '', '', '', '', '', 'Total Sums', $total, $records->sum('noveltreat_count'), $records->sum('sematrinity_count')]);
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function analytics(Request $request)
+    {
+        $user = auth()->user();
+        
+        // --- Metadata for filters ---
+        $zones = Zone::orderBy('name')->get();
+        $regions = Region::orderBy('name');
+        $hqs = Hq::orderBy('name');
+
+        if ($user->role === 'SLM') {
+            $regions = $regions->where('zone_id', $user->zone_id);
+            $hqs = $hqs->whereHas('region', function($q) use ($user) { $q->where('zone_id', $user->zone_id); });
+        } elseif ($user->role === 'FLM') {
+            $regions = $regions->where('id', $user->region_id);
+            $hqs = $hqs->where('region_id', $user->region_id);
+        }
+        $regions = $regions->get();
+        $hqs = $hqs->get();
+
+        // --- Data Filtering for Analytics (Reporting Hierarchy) ---
+        $baseUsers = User::whereIn('role', ['FLE', 'sales_team', 'FLM', 'SLM']);
+        if ($user->role === 'SLM') {
+            $flmIds = User::where('reporting_to_id', $user->id)->pluck('id');
+            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
+            $allSubIds = $flmIds->merge($fleIds)->push($user->id);
+            $baseUsers->whereIn('id', $allSubIds);
+        } elseif ($user->role === 'FLM') {
+            $allSubIds = User::where('reporting_to_id', $user->id)->pluck('id')->push($user->id);
+            $baseUsers->whereIn('id', $allSubIds);
+        }
+        
+        // Filter by user selection
+        if ($request->filled('zone_id')) $baseUsers->where('zone_id', $request->zone_id);
+        if ($request->filled('region_id')) $baseUsers->where('region_id', $request->region_id);
+        if ($request->filled('hq_id')) $baseUsers->where('hq_id', $request->hq_id);
+
+        $soIds = $baseUsers->pluck('id');
+
+        $yesterday = Carbon::yesterday()->format('Y-m-d');
+        $startOfWeek = Carbon::now()->subDays(7)->format('Y-m-d');
+        $startOfMonth = Carbon::now()->startOfMonth()->format('Y-m-d');
+
+        // Aggregated sums for each user
+        $stats = RxDetail::whereIn('user_id', $soIds)
+            ->select('user_id')
+            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as yesterday_total", [$yesterday])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as week_total", [$startOfWeek])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as mtd_total", [$startOfMonth])
+            ->groupBy('user_id')
+            ->get()
+            ->keyBy('user_id');
+
+        $allSOs = $baseUsers->with(['hq', 'zone', 'region'])->get();
+        $leaderboard = [];
+        $lowPerformers = [];
+
+        foreach ($allSOs as $so) {
+            $uStats = $stats[$so->id] ?? null;
+            $y = $uStats ? (int)$uStats->yesterday_total : 0;
+            $w = $uStats ? (int)$uStats->week_total : 0;
+            $m = $uStats ? (int)$uStats->mtd_total : 0;
+            
+            $data = ['name' => $so->name, 'hq' => $so->hq->name ?? 'N/A', 'yesterday' => $y, 'week' => $w, 'mtd' => $m];
+            if ($y >= 10) $leaderboard[] = $data;
+            if ($y < 5) $lowPerformers[] = $data;
+        }
+        usort($leaderboard, fn($a, $b) => $b['yesterday'] <=> $a['yesterday']);
+        usort($lowPerformers, fn($a, $b) => $a['yesterday'] <=> $b['yesterday']);
+
+        // --- Chart Data ---
+        // 1. Zone Wise Bar Chart
+        $zoneStatsQuery = RxDetail::select('zone_id')
+            ->selectRaw("SUM(rx_count) as total")
+            ->whereIn('user_id', $soIds)
+            ->where('date', '>=', $startOfMonth)
+            ->groupBy('zone_id');
+        $zoneData = $zoneStatsQuery->with('zone')->get();
+        $chartZones = ['labels' => $zoneData->pluck('zone.name'), 'values' => $zoneData->pluck('total')];
+
+        // 2. Product Split (MTD)
+        $productSplit = RxDetail::whereIn('user_id', $soIds)
+            ->where('date', '>=', $startOfMonth)
+            ->selectRaw("SUM(noveltreat_count) as nt, SUM(sematrinity_count) as st")
+            ->first();
+
+        // 3. Zone wise statistics (Table)
+        $zoneTableQuery = RxDetail::select('zone_id')
+            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as yesterday_total", [$yesterday])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as week_total", [$startOfWeek])
+            ->groupBy('zone_id');
+
+        if ($user->role === 'SLM' || $user->role === 'FLM') {
+            $zoneTableQuery->where('zone_id', $user->zone_id);
+        }
+        $zoneTableStats = $zoneTableQuery->with('zone')->get();
+
+        // 4. Daily Trend (Last 15 days)
+        $trendStart = Carbon::now()->subDays(15)->format('Y-m-d');
+        $trendData = RxDetail::whereIn('user_id', $soIds)
+            ->where('date', '>=', $trendStart)
+            ->select('date')
+            ->selectRaw("SUM(rx_count) as total")
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+        $chartTrend = [
+            'labels' => $trendData->map(fn($t) => Carbon::parse($t->date)->format('d M')),
+            'values' => $trendData->pluck('total')
+        ];
+
+        return view('admin.analytics', compact(
+            'leaderboard', 'lowPerformers', 'chartZones', 'productSplit', 'chartTrend',
+            'zones', 'regions', 'hqs', 'zoneTableStats'
+        ));
+    }
+
+    public function exportAnalytics(Request $request)
+    {
+        $user = auth()->user();
+        $baseUsers = User::whereIn('role', ['FLE', 'sales_team', 'FLM', 'SLM']);
+        if ($user->role === 'SLM') {
+            $flmIds = User::where('reporting_to_id', $user->id)->pluck('id');
+            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
+            $allSubIds = $flmIds->merge($fleIds)->push($user->id);
+            $baseUsers->whereIn('id', $allSubIds);
+        } elseif ($user->role === 'FLM') {
+            $allSubIds = User::where('reporting_to_id', $user->id)->pluck('id')->push($user->id);
+            $baseUsers->whereIn('id', $allSubIds);
+        }
+
+        if ($request->filled('zone_id')) $baseUsers->where('zone_id', $request->zone_id);
+        if ($request->filled('region_id')) $baseUsers->where('region_id', $request->region_id);
+        if ($request->filled('hq_id')) $baseUsers->where('hq_id', $request->hq_id);
+
+        $soIds = $baseUsers->pluck('id');
+        $yesterday = Carbon::yesterday()->format('Y-m-d');
+        $startOfWeek = Carbon::now()->subDays(7)->format('Y-m-d');
+        $startOfMonth = Carbon::now()->startOfMonth()->format('Y-m-d');
+
+        $stats = RxDetail::whereIn('user_id', $soIds)
+            ->select('user_id')
+            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as yesterday_total", [$yesterday])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as week_total", [$startOfWeek])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as mtd_total", [$startOfMonth])
+            ->groupBy('user_id')
+            ->get()
+            ->keyBy('user_id');
+
+        $allSOs = $baseUsers->with(['hq', 'zone', 'region'])->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="Analytics_Report_'.date('Ymd').'.csv"',
+        ];
+
+        $callback = function () use ($allSOs, $stats) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Analytics Performance Report']);
+            fputcsv($handle, ['Generated On: ' . date('d-m-Y H:i')]);
+            fputcsv($handle, []);
+            fputcsv($handle, ['SO Name', 'Zone', 'Region', 'HQ', 'Yesterday Total', 'Last 7 Days', 'MTD Total']);
+
+            foreach ($allSOs as $so) {
+                $uS = $stats[$so->id] ?? null;
+                fputcsv($handle, [
+                    $so->name,
+                    $so->zone->name ?? 'N/A',
+                    $so->region->name ?? 'N/A',
+                    $so->hq->name ?? 'N/A',
+                    $uS ? $uS->yesterday_total : 0,
+                    $uS ? $uS->week_total : 0,
+                    $uS ? $uS->mtd_total : 0,
+                ]);
+            }
             fclose($handle);
         };
 

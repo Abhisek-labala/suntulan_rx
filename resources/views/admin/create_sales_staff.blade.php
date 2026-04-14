@@ -42,12 +42,31 @@
                                         </div>
                                     </div>
 
-                                    <!-- Role & Designation (Role is hidden/defaulted) -->
-                                    <div class="col-md-12 mt-3">
+                                    <!-- Role & Designation -->
+                                    <div class="col-md-4 mt-3">
+                                        <div class="form-group">
+                                            <label>Role</label>
+                                            <select name="role" id="role" class="form-control" required>
+                                                <option value="sales_team">FLE(HQ Access)</option>
+                                                <option value="TLM">TLM (Admin Access)</option>
+                                                <option value="SLM">SLM (Zone Access)</option>
+                                                <option value="FLM">FLM (Region Access)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mt-3">
                                         <div class="form-group">
                                             <label>Designation</label>
                                             <select name="designation_id" id="designation_id" class="form-control" required>
                                                 <option value="">-- Select Designation --</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mt-3">
+                                        <div class="form-group">
+                                            <label>Reporting To</label>
+                                            <select name="reporting_to_id" id="reporting_to_id" class="form-control">
+                                                <option value="">-- Select Manager --</option>
                                             </select>
                                         </div>
                                     </div>
@@ -117,6 +136,22 @@ $(document).ready(function() {
             $('#designation_id').html(html);
         });
     }
+
+    // Dynamic Manager Loading
+    $('#role').change(function() {
+        const role = $(this).val();
+        $('#reporting_to_id').html('<option value="">Loading managers...</option>');
+        
+        if(role) {
+            $.get('/get-managers', { role: role }, function(data) {
+                let html = '<option value="">-- Select Manager --</option>';
+                data.forEach(manager => {
+                    html += `<option value="${manager.id}">${manager.name} (${role === 'SLM' ? 'TLM/Admin' : (role === 'FLM' ? 'SLM' : 'FLM')})</option>`;
+                });
+                $('#reporting_to_id').html(html);
+            });
+        }
+    });
 
     // Dynamic Region Loading
     $('#zone_id').change(function() {

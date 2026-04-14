@@ -8,6 +8,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ route('admin.analytics') }}">
+                        <i class="fa fa-bar-chart"></i> <span>Analytics</span>
+                    </a>
+                </li>
+                @if(in_array(auth()->user()->role, ['admin', 'TLM']))
+                <li>
                     <a href="{{ route('sales-team.index') }}">
                         <i class="fa fa-users"></i> <span>Sales Team</span>
                     </a>
@@ -24,6 +30,7 @@
                         <li><a href="{{ route('designations.index') }}"><i class="fa fa-id-badge"></i> Designations</a></li>
                     </ul>
                 </li>
+                @endif
                 <li>
                     <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
                         @csrf

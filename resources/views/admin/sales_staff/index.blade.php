@@ -34,6 +34,7 @@
                                             <th>Password</th>
                                             <th>Employee ID</th>
                                             <th>Designation</th>
+                                            <th>Reporting To</th>
                                             <th>Zone / Region / HQ</th>
                                             <th class="text-right">Actions</th>
                                         </tr>
@@ -47,6 +48,14 @@
                                             <td><code>{{ $member->plain_password }}</code></td>
                                             <td>{{ $member->employee_id }}</td>
                                             <td>{{ $member->designation->name ?? 'N/A' }}</td>
+                                            <td>
+                                                @if($member->reportingTo)
+                                                    {{ $member->reportingTo->name }} <br>
+                                                    <small class="text-muted">({{ $member->reportingTo->role }})</small>
+                                                @else
+                                                    <span class="text-muted">N/A</span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <small>
                                                     Z: {{ $member->zone->name ?? 'N/A' }} <br>

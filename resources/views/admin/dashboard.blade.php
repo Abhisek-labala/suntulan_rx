@@ -5,7 +5,13 @@
 
     <div class="page-wrapper" style="min-height: 653px;">
         <div class="content container-fluid">
-            @include('admin.breadcum')
+            <div class="page-header">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <h3 class="page-title">{{ strtoupper(str_replace('_', ' ', auth()->user()->role)) }} DASHBOARD</h3>
+                    </div>
+                </div>
+            </div>
 
             <div class="row">
                 <div class="col-lg-12">
@@ -26,24 +32,34 @@
                                 <div class="mb-3 row">
                                     <label class="col-form-label col-md-2">Zone</label>
                                     <div class="col-md-10">
-                                        <select class="form-control" name="zone_id" id="zone_id">
-                                            <option value=""> -- Select -- </option>
-                                            @foreach($zones as $zone)
-                                                <option value="{{ $zone->id }}">{{ $zone->name }}</option>
-                                            @endforeach
-                                        </select>
+                                        @if(auth()->user()->role === 'SLM' || auth()->user()->role === 'FLM')
+                                            <input type="text" class="form-control" value="{{ auth()->user()->zone->name ?? 'N/A' }}" readonly>
+                                            <input type="hidden" name="zone_id" id="zone_id" value="{{ auth()->user()->zone_id }}">
+                                        @else
+                                            <select class="form-control" name="zone_id" id="zone_id">
+                                                <option value=""> -- Select -- </option>
+                                                @foreach($zones as $zone)
+                                                    <option value="{{ $zone->id }}">{{ $zone->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        @endif
                                     </div>
                                 </div>
 
                                 <div class="mb-3 row">
                                     <label class="col-form-label col-md-2">Region</label>
                                     <div class="col-md-10">
-                                        <select class="form-control" name="region_id" id="region_id">
-                                            <option value=""> -- Select -- </option>
-                                            @foreach($regions as $region)
-                                                <option value="{{ $region->id }}">{{ $region->name }}</option>
-                                            @endforeach
-                                        </select>
+                                        @if(auth()->user()->role === 'FLM')
+                                            <input type="text" class="form-control" value="{{ auth()->user()->region->name ?? 'N/A' }}" readonly>
+                                            <input type="hidden" name="region_id" id="region_id" value="{{ auth()->user()->region_id }}">
+                                        @else
+                                            <select class="form-control" name="region_id" id="region_id">
+                                                <option value=""> -- Select -- </option>
+                                                @foreach($regions as $region)
+                                                    <option value="{{ $region->id }}">{{ $region->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -59,6 +75,7 @@
                                     </div>
                                 </div>
 
+                                @if(in_array(auth()->user()->role, ['admin', 'TLM']))
                                 <div class="mb-3 row">
                                     <label class="col-form-label col-md-2">Designation</label>
                                     <div class="col-md-10">
@@ -70,6 +87,7 @@
                                         </select>
                                     </div>
                                 </div>
+                                @endif
 
                                 <div class="mb-3 row">
                                     <label class="col-form-label col-md-2"> </label>
@@ -89,11 +107,14 @@
                                                 <th>DATE</th>
                                                 <th>PREFIX</th>
                                                 <th>EMPLOYEE NAME</th>
-                                                <th>DESIGNATION</th>
+                                                <th>FLM</th>
+                                                <th>SLM</th>
                                                 <th>HQ</th>
                                                 <th>REGION</th>
                                                 <th>ZONE</th>
-                                                <th>RX NO.</th>
+                                                <th>TOTAL RX</th>
+                                                <th>NOVELTREAT</th>
+                                                <th>SEMATRINITY</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
@@ -129,11 +150,14 @@
                 { data: 'date' },
                 { data: 'prefix' },
                 { data: 'name' },
-                { data: 'designation' },
+                { data: 'flm_name' },
+                { data: 'slm_name' },
                 { data: 'hq' },
                 { data: 'region' },
                 { data: 'zone' },
-                { data: 'rx_count' }
+                { data: 'rx_count', className: 'font-weight-bold' },
+                { data: 'noveltreat_count' },
+                { data: 'sematrinity_count' }
             ]
         });
 

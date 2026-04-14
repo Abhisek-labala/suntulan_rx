@@ -30,7 +30,18 @@ class User extends Authenticatable
         'hq_id',
         'region_id',
         'zone_id',
+        'reporting_to_id',
     ];
+
+    public function reportingTo()
+    {
+        return $this->belongsTo(User::class, 'reporting_to_id');
+    }
+
+    public function subordinates()
+    {
+        return $this->hasMany(User::class, 'reporting_to_id');
+    }
 
     /**
      * The attributes that should be hidden for serialization.

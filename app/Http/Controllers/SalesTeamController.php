@@ -28,9 +28,25 @@ class SalesTeamController extends Controller
         return response()->json(\App\Models\Designation::all());
     }
 
+    public function getManagers(Request $request)
+    {
+        $role = $request->role;
+        $managers = [];
+        
+        if ($role === 'FLE' || $role === 'sales_team') {
+            $managers = \App\Models\User::where('role', 'FLM')->get(['id', 'name']);
+        } elseif ($role === 'FLM') {
+            $managers = \App\Models\User::where('role', 'SLM')->get(['id', 'name']);
+        } elseif ($role === 'SLM') {
+            $managers = \App\Models\User::whereIn('role', ['admin', 'TLM'])->get(['id', 'name']);
+        }
+        
+        return response()->json($managers);
+    }
+
     public function index()
     {
-        $staff = \App\Models\User::where('role', 'sales_team')->with(['zone', 'region', 'hq', 'designation'])->get();
+        $staff = \App\Models\User::whereIn('role', ['sales_team', 'TLM', 'SLM', 'FLM', 'FLE'])->with(['zone', 'region', 'hq', 'designation', 'reportingTo'])->get();
         return view('admin.sales_staff.index', compact('staff'));
     }
 
@@ -49,17 +65,19 @@ class SalesTeamController extends Controller
             'hq_id' => 'nullable|exists:hqs,id',
             'prefix' => 'nullable',
             'employee_id' => 'nullable|unique:users',
+            'role' => 'required|in:TLM,SLM,FLM,FLE,sales_team',
+            'reporting_to_id' => 'nullable|exists:users,id',
         ]);
 
         // Auto-generate credentials
-        $username = 'sun_' . strtolower(str_replace(' ', '', $request->name)) . '_' . rand(100, 999);
+        $username = strtolower(str_replace(' ', '', $request->name)) . '_' . rand(100, 999);
         $password = \Illuminate\Support\Str::random(8);
 
         $userData = array_merge($validated, [
             'username' => $username,
             'password' => \Illuminate\Support\Facades\Hash::make($password),
             'plain_password' => $password,
-            'role' => 'sales_team'
+            'role' => $request->role ?? 'sales_team'
         ]);
 
         \App\Models\User::create($userData);
@@ -90,6 +108,8 @@ class SalesTeamController extends Controller
             'hq_id' => 'nullable|exists:hqs,id',
             'prefix' => 'nullable',
             'employee_id' => 'nullable|unique:users,employee_id,' . $id,
+            'role' => 'required|in:TLM,SLM,FLM,FLE,sales_team',
+            'reporting_to_id' => 'nullable|exists:users,id',
         ]);
 
         $user->update($validated);

@@ -13,6 +13,8 @@ class RxDetail extends Model
         'hq_id',
         'sc_name',
         'rx_count',
+        'noveltreat_count',
+        'sematrinity_count',
         'date'
     ];
     public function zone()

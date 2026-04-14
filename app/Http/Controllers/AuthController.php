@@ -28,10 +28,10 @@ class AuthController extends Controller
         if ($userFound && \Illuminate\Support\Facades\Auth::attempt(['username' => $userFound->username, 'password' => $password])) {
             $role = \Illuminate\Support\Facades\Auth::user()->role;
             $redirect = '/';
-            if ($role === 'admin') {
+            
+            if (in_array($role, ['admin', 'TLM', 'SLM', 'FLM'])) {
                 $redirect = route('admin.dashboard');
-            }
-            elseif ($role === 'sales_team') {
+            } elseif (in_array($role, ['sales_team', 'FLE'])) {
                 $redirect = route('rx.index');
             }
 

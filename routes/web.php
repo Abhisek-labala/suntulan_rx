@@ -15,16 +15,19 @@ Route::post('/login', [AuthController::class , 'loginPost'])->name('login.submit
 Route::middleware(['auth'])->group(function () {
     Route::post('/logout', [AuthController::class , 'logout'])->name('logout');
 
-    Route::middleware(['role:admin'])->group(function () {
+    Route::middleware(['role:admin|TLM|SLM|FLM'])->group(function () {
             Route::get('/admin-dashboard', [AdminController::class , 'dashboard'])->name('admin.dashboard');
             Route::get('/admin/dashboard-data', [AdminController::class , 'getDashboardData'])->name('admin.dashboard.data');
             Route::get('/admin/dashboard-export', [AdminController::class , 'exportDashboard'])->name('admin.dashboard.export');
+            Route::get('/admin/analytics', [AdminController::class, 'analytics'])->name('admin.analytics');
+            Route::get('/admin/analytics-export', [AdminController::class , 'exportAnalytics'])->name('admin.analytics.export');
 
             // Dynamic Data Fetching Routes
             Route::get('/get-zones', [SalesTeamController::class , 'getZones']);
             Route::get('/get-regions', [SalesTeamController::class , 'getRegions']);
             Route::get('/get-hqs', [SalesTeamController::class , 'getHqs']);
             Route::get('/get-designations', [SalesTeamController::class , 'getDesignations']);
+            Route::get('/get-managers', [SalesTeamController::class , 'getManagers']);
 
             // Team Management
             Route::get('/admin/sales-team', [SalesTeamController::class , 'index'])->name('sales-team.index');
@@ -60,7 +63,7 @@ Route::middleware(['auth'])->group(function () {
             }
             );
 
-            Route::middleware(['role:sales_team'])->group(function () {
+            Route::middleware(['role:sales_team|FLE'])->group(function () {
             Route::get('/rx-details', [RxController::class , 'index'])->name('rx.index');
             Route::get('/rx-details/export', [RxController::class , 'export'])->name('rx.export');
             Route::post('/rx-details', [RxController::class , 'store'])->name('rx.store');

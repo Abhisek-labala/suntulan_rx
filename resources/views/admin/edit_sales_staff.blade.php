@@ -44,12 +44,31 @@
                                         </div>
                                     </div>
 
-                                    <!-- Designation -->
-                                    <div class="col-md-12 mt-3">
+                                    <!-- Role & Designation -->
+                                    <div class="col-md-4 mt-3">
+                                        <div class="form-group">
+                                            <label>Role</label>
+                                            <select name="role" id="role" class="form-control" required>
+                                                <option value="sales_team" {{ $user->role == 'sales_team' ? 'selected' : '' }}>FLE(HQ Access)</option>
+                                                <option value="TLM" {{ $user->role == 'TLM' ? 'selected' : '' }}>TLM (Admin Access)</option>
+                                                <option value="SLM" {{ $user->role == 'SLM' ? 'selected' : '' }}>SLM (Zone Access)</option>
+                                                <option value="FLM" {{ $user->role == 'FLM' ? 'selected' : '' }}>FLM (Region Access)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mt-3">
                                         <div class="form-group">
                                             <label>Designation</label>
                                             <select name="designation_id" id="designation_id" class="form-control" required>
                                                 <option value="">-- Select Designation --</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mt-3">
+                                        <div class="form-group">
+                                            <label>Reporting To</label>
+                                            <select name="reporting_to_id" id="reporting_to_id" class="form-control">
+                                                <option value="">-- Select Manager --</option>
                                             </select>
                                         </div>
                                     </div>
@@ -101,10 +120,12 @@ $(document).ready(function() {
     const selectedZone = "{{ $user->zone_id }}";
     const selectedRegion = "{{ $user->region_id }}";
     const selectedHQ = "{{ $user->hq_id }}";
+    const selectedManager = "{{ $user->reporting_to_id }}";
 
     // Load Initial Data
     loadZones();
     loadDesignations();
+    loadManagers($('#role').val(), selectedManager);
 
     function loadZones() {
         $.get('/get-zones', function(data) {
@@ -128,6 +149,22 @@ $(document).ready(function() {
             $('#designation_id').html(html);
         });
     }
+
+    function loadManagers(role, managerId = null) {
+        if(role) {
+            $.get('/get-managers', { role: role }, function(data) {
+                let html = '<option value="">-- Select Manager --</option>';
+                data.forEach(manager => {
+                    html += `<option value="${manager.id}" ${manager.id == managerId ? 'selected' : ''}>${manager.name}</option>`;
+                });
+                $('#reporting_to_id').html(html);
+            });
+        }
+    }
+
+    $('#role').change(function() {
+        loadManagers($(this).val());
+    });
 
     function loadRegions(zoneId, regionId = null) {
         if(zoneId) {

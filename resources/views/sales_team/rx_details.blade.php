@@ -24,13 +24,13 @@
                             <form action="{{ route('rx.store') }}" method="POST">
                                 @csrf
                                 <div class="row align-items-end">
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>Zone</label>
                                             <input type="text" class="form-control" value="{{ Auth::user()->zone->name ?? 'N/A' }}" readonly>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>Region</label>
                                             <input type="text" class="form-control" value="{{ Auth::user()->region->name ?? 'N/A' }}" readonly>
@@ -48,10 +48,22 @@
                                             <input type="text" name="sc_name" class="form-control" placeholder="SC Name" required>
                                         </div>
                                     </div>
-                                    <div class="col-md-1">
+                                    <div class="col-md-2">
                                         <div class="form-group mb-0">
-                                            <label>RX Count</label>
-                                            <input type="number" name="rx_count" class="form-control" placeholder="0" required min="1">
+                                            <label>Noveltreat</label>
+                                            <input type="number" name="noveltreat_count" id="noveltreat_input" class="form-control" placeholder="0" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group mb-0">
+                                            <label>Sematrinity</label>
+                                            <input type="number" name="sematrinity_count" id="sematrinity_input" class="form-control" placeholder="0" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group mb-0">
+                                            <label>Total RX</label>
+                                            <input type="text" id="total_rx_display" class="form-control font-weight-bold text-primary" value="0" readonly>
                                         </div>
                                     </div>
                                     <div class="col-md-2">
@@ -129,7 +141,9 @@
                                             <th>Region</th>
                                             <th>HQ</th>
                                             <th>SC Name</th>
-                                            <th>RX Count</th>
+                                            <th>Total RX</th>
+                                            <th>Noveltreat</th>
+                                            <th>Sematrinity</th>
                                             <th class="no-export text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -141,12 +155,15 @@
                                             <td>{{ $rx->region->name ?? 'N/A' }}</td>
                                             <td>{{ $rx->hq->name ?? 'N/A' }}</td>
                                             <td>{{ $rx->sc_name ?? 'N/A' }}</td>
-                                            <td>{{ $rx->rx_count }}</td>
+                                            <td><strong>{{ $rx->rx_count }}</strong></td>
+                                            <td>{{ $rx->noveltreat_count }}</td>
+                                            <td>{{ $rx->sematrinity_count }}</td>
                                             <td class="text-right">
                                                 <div class="actions">
                                                     <a class="btn btn-sm bg-success-light mr-2 edit-rx" href="#"
                                                         data-id="{{ $rx->id }}"
-                                                        data-count="{{ $rx->rx_count }}"
+                                                        data-noveltreat="{{ $rx->noveltreat_count }}"
+                                                        data-sematrinity="{{ $rx->sematrinity_count }}"
                                                         data-sc_name="{{ $rx->sc_name }}"
                                                         data-date="{{ $rx->date }}">
                                                         <i class="fa fa-pencil"></i> Edit
@@ -166,8 +183,10 @@
                                     @if($rxDetails->count() > 0)
                                     <tfoot>
                                         <tr class="font-weight-bold">
-                                            <td colspan="5" class="text-right">Total RX</td>
+                                            <td colspan="5" class="text-right">Totals</td>
                                             <td>{{ $rxDetails->sum('rx_count') }}</td>
+                                            <td>{{ $rxDetails->sum('noveltreat_count') }}</td>
+                                            <td>{{ $rxDetails->sum('sematrinity_count') }}</td>
                                             <td></td>
                                         </tr>
                                     </tfoot>
@@ -200,9 +219,19 @@
                         <label>SC Name</label>
                         <input type="text" name="sc_name" id="edit_sc_name" class="form-control" required>
                     </div>
-                    <div class="form-group mt-3">
-                        <label>RX Count</label>
-                        <input type="number" name="rx_count" id="edit_rx_count" class="form-control" required min="1">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mt-3">
+                                <label>Noveltreat Count</label>
+                                <input type="number" name="noveltreat_count" id="edit_noveltreat" class="form-control" required min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mt-3">
+                                <label>Sematrinity Count</label>
+                                <input type="number" name="sematrinity_count" id="edit_sematrinity" class="form-control" required min="0">
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group mt-3">
                         <label>Date</label>
@@ -231,10 +260,19 @@ $(document).ready(function() {
         ]
     });
 
+    // Live calculation for Total RX
+    function calculateTotal() {
+        let n = parseInt($('#noveltreat_input').val()) || 0;
+        let s = parseInt($('#sematrinity_input').val()) || 0;
+        $('#total_rx_display').val(n + s);
+    }
+    $('#noveltreat_input, #sematrinity_input').on('input', calculateTotal);
+
     // Use event delegation so DataTables doesn't break the bindings
     $(document).on('click', '.edit-rx', function(e) {
         e.preventDefault();
-        $('#edit_rx_count').val($(this).data('count'));
+        $('#edit_noveltreat').val($(this).data('noveltreat'));
+        $('#edit_sematrinity').val($(this).data('sematrinity'));
         $('#edit_sc_name').val($(this).data('sc_name'));
         $('#edit_date').val($(this).data('date'));
         $('#editRXForm').attr('action', '/rx-details/' + $(this).data('id'));
