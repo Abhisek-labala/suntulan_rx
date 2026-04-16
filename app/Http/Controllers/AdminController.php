@@ -161,8 +161,18 @@ class AdminController extends Controller
 
         $records = $query->orderBy('date', 'desc')->get();
 
-        $fromLabel = $request->filled('from_date') ?Carbon::parse($request->from_date)->format('d-m-Y') : 'All';
-        $toLabel = $request->filled('to_date') ?Carbon::parse($request->to_date)->format('d-m-Y') : 'All';
+        $fromLabel = $request->filled('from_date') ? Carbon::parse($request->from_date)->format('d-m-Y') : 'All';
+        $toLabel = $request->filled('to_date') ? Carbon::parse($request->to_date)->format('d-m-Y') : 'All';
+        
+        $filterStrings = [];
+        if($request->filled('zone_id')) $filterStrings[] = 'Zone: ' . (\App\Models\Zone::find($request->zone_id)->name ?? 'N/A');
+        if($request->filled('region_id')) $filterStrings[] = 'Region: ' . (\App\Models\Region::find($request->region_id)->name ?? 'N/A');
+        if($request->filled('slm_id')) $filterStrings[] = 'SLM: ' . (\App\Models\User::find($request->slm_id)->name ?? 'N/A');
+        if($request->filled('flm_id')) $filterStrings[] = 'FLM: ' . (\App\Models\User::find($request->flm_id)->name ?? 'N/A');
+        if($request->filled('fle_id')) $filterStrings[] = 'FLE: ' . (\App\Models\User::find($request->fle_id)->name ?? 'N/A');
+        
+        $filterDescription = !empty($filterStrings) ? implode(' | ', $filterStrings) : 'All Criteria';
+
         $filename = 'Admin_RX_Detailed_Report_' . $fromLabel . '_to_' . $toLabel;
 
         $format = $request->get('format', 'excel');
@@ -199,12 +209,13 @@ class AdminController extends Controller
             $html .= '<td class="title-cell">';
             $html .= '<h2>Admin RX Detailed Report</h2>';
             $html .= '<p class="sub">Period: ' . $fromLabel . ' &nbsp;to&nbsp; ' . $toLabel . '</p>';
+            $html .= '<p class="sub" style="margin-top:2px;">' . htmlspecialchars($filterDescription) . '</p>';
             $html .= '</td>';
             $html .= '<td style="width:70px;"></td>'; // spacer to center title
             $html .= '</tr></table>';
 
             $html .= '<table class="data-tbl">';
-            $html .= '<tr><th>DATE</th><th>PREFIX</th><th>EMPLOYEE NAME</th><th>FLM</th><th>SLM</th><th>HQ</th><th>REGION</th><th>ZONE</th><th>TOTAL RX</th><th>NOVELTREAT</th><th>SEMATRINITY</th></tr>';
+            $html .= '<tr><th>DATE</th><th>PREFIX</th><th>EMPLOYEE NAME</th><th>FLM</th><th>SLM</th><th>REGION</th><th>ZONE</th><th>TOTAL RX</th><th>NOVELTREAT</th><th>SEMATRINITY</th></tr>';
 
             $total = 0;
             foreach ($records as $rx) {
@@ -224,7 +235,6 @@ class AdminController extends Controller
                 $html .= '<td>' . htmlspecialchars($rx->user->name ?? '-') . '</td>';
                 $html .= '<td>' . htmlspecialchars($flm) . '</td>';
                 $html .= '<td>' . htmlspecialchars($slm) . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->hq->name ?? ($rx->user->hq->name ?? '-')) . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->region->name ?? ($rx->user->region->name ?? '-')) . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->zone->name ?? ($rx->user->zone->name ?? '-')) . '</td>';
                 $html .= '<td><strong>' . $rx->rx_count . '</strong></td>';
@@ -233,7 +243,7 @@ class AdminController extends Controller
                 $html .= '</tr>';
             }
 
-            $html .= '<tr class="total"><td colspan="8" style="text-align:right;">Total Sums</td>';
+            $html .= '<tr class="total"><td colspan="7" style="text-align:right;">Total Sums</td>';
             $html .= '<td>' . $total . '</td>';
             $html .= '<td>' . $records->sum('noveltreat_count') . '</td>';
             $html .= '<td>' . $records->sum('sematrinity_count') . '</td></tr>';
@@ -249,12 +259,12 @@ class AdminController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
         ];
 
-        $callback = function () use ($records, $fromLabel, $toLabel) {
-            $handle = fopen('php://output', 'w');
+        $callback = function () use ($records, $fromLabel, $toLabel, $filterDescription) {
             fputcsv($handle, ['Admin RX Detailed Report']);
             fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
+            fputcsv($handle, ['Filters: ' . $filterDescription]);
             fputcsv($handle, []);
-            fputcsv($handle, ['DATE', 'PREFIX', 'EMPLOYEE NAME', 'FLM', 'SLM', 'HQ', 'REGION', 'ZONE', 'TOTAL RX', 'NOVELTREAT', 'SEMATRINITY', 'Created On', 'LAST UPDATED']);
+            fputcsv($handle, ['DATE', 'PREFIX', 'EMPLOYEE NAME', 'FLM', 'SLM', 'REGION', 'ZONE', 'TOTAL RX', 'NOVELTREAT', 'SEMATRINITY', 'Created On', 'LAST UPDATED']);
 
             $total = 0;
             foreach ($records as $rx) {
@@ -274,7 +284,6 @@ class AdminController extends Controller
                     $rx->user->name ?? '-',
                     $flm,
                     $slm,
-                    $rx->hq->name ?? ($rx->user->hq->name ?? '-'),
                     $rx->region->name ?? ($rx->user->region->name ?? '-'),
                     $rx->zone->name ?? ($rx->user->zone->name ?? '-'),
                     $rx->rx_count,
@@ -286,7 +295,7 @@ class AdminController extends Controller
             }
 
             fputcsv($handle, []);
-            fputcsv($handle, ['', '', '', '', '', '', '', 'Total Sums', $total, $records->sum('noveltreat_count'), $records->sum('sematrinity_count')]);
+            fputcsv($handle, ['', '', '', '', '', '', 'Total Sums', $total, $records->sum('noveltreat_count'), $records->sum('sematrinity_count')]);
             fclose($handle);
         };
 
