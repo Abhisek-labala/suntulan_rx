@@ -242,53 +242,74 @@
             });
         }
 
-        function updateFlms(slmId) {
+        function updateFlms(slmId, zoneId, regionId) {
+            var url = '/get-flms?';
+            if(slmId) url += 'slm_id=' + slmId + '&';
+            if(zoneId) url += 'zone_id=' + zoneId + '&';
+            if(regionId) url += 'region_id=' + regionId;
+            
             $('#flm_id').html('<option value=""> -- Select -- </option>');
             $('#fle_id').html('<option value=""> -- Select -- </option>');
-            if (slmId) {
-                $.ajax({
-                    url: '/get-flms?slm_id=' + slmId,
-                    type: 'GET',
-                    success: function(data) {
-                        data.forEach(function(flm) {
-                            $('#flm_id').append('<option value="' + flm.id + '">' + flm.name + '</option>');
-                        });
-                    }
-                });
-            }
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    data.forEach(function(flm) {
+                        $('#flm_id').append('<option value="' + flm.id + '">' + flm.name + '</option>');
+                    });
+                }
+            });
         }
 
-        function updateFles(flmId) {
+        function updateFles(flmId, zoneId, regionId) {
+            var url = '/get-fles?';
+            if(flmId) url += 'flm_id=' + flmId + '&';
+            if(zoneId) url += 'zone_id=' + zoneId + '&';
+            if(regionId) url += 'region_id=' + regionId;
+
             $('#fle_id').html('<option value=""> -- Select -- </option>');
-            if (flmId) {
-                $.ajax({
-                    url: '/get-fles?flm_id=' + flmId,
-                    type: 'GET',
-                    success: function(data) {
-                        data.forEach(function(fle) {
-                            $('#fle_id').append('<option value="' + fle.id + '">' + fle.name + '</option>');
-                        });
-                    }
-                });
-            }
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    data.forEach(function(fle) {
+                        $('#fle_id').append('<option value="' + fle.id + '">' + fle.name + '</option>');
+                    });
+                }
+            });
         }
 
         $('#zone_id').change(function() {
-            updateRegions($(this).val());
+            var zid = $(this).val();
+            updateRegions(zid);
+            @if(in_array(auth()->user()->role, ['admin', 'TLM']))
+                updateSlms(zid, null);
+                updateFlms(null, zid, null);
+                updateFles(null, zid, null);
+            @endif
         });
 
         $('#region_id').change(function() {
+            var zid = $('#zone_id').val();
+            var rid = $(this).val();
             @if(in_array(auth()->user()->role, ['admin', 'TLM']))
-            updateSlms($('#zone_id').val(), $(this).val());
+                updateSlms(zid, rid);
+                updateFlms(null, zid, rid);
+                updateFles(null, zid, rid);
+            @elseif(auth()->user()->role === 'SLM')
+                updateFlms($('#slm_id').val(), zid, rid);
+                updateFles(null, zid, rid);
+            @elseif(auth()->user()->role === 'FLM')
+                updateFles($('#flm_id').val(), zid, rid);
             @endif
         });
 
         $('#slm_id').change(function() {
-            updateFlms($(this).val());
+            updateFlms($(this).val(), $('#zone_id').val(), $('#region_id').val());
         });
 
         $('#flm_id').change(function() {
-            updateFles($(this).val());
+            updateFles($(this).val(), $('#zone_id').val(), $('#region_id').val());
         });
     });
 
