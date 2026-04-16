@@ -265,7 +265,7 @@ class AdminController extends Controller
             fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
             fputcsv($handle, ['Filters: ' . $filterDescription]);
             fputcsv($handle, []);
-            fputcsv($handle, ['DATE', 'PREFIX', 'EMPLOYEE NAME', 'FLM', 'SLM', 'REGION', 'ZONE', 'TOTAL RX', 'NOVELTREAT', 'SEMATRINITY', 'Created On', 'LAST UPDATED']);
+            fputcsv($handle, ['DATE', 'PREFIX', 'EMPLOYEE NAME', 'FLM', 'SLM', 'REGION', 'ZONE', 'TOTAL RX', 'NOVELTREAT', 'SEMATRINITY', 'CREATED ON', 'LAST UPDATED']);
 
             $total = 0;
             foreach ($records as $rx) {
