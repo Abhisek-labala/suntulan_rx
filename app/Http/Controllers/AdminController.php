@@ -19,23 +19,16 @@ class AdminController extends Controller
         $user = auth()->user();
         $zones = Zone::orderBy('name')->get();
         $regions = Region::orderBy('name');
-        $hqs = Hq::orderBy('name');
-        $designations = Designation::orderBy('name')->get();
 
         if ($user->role === 'SLM') {
             $regions = $regions->where('zone_id', $user->zone_id);
-            $hqs = $hqs->whereHas('region', function($q) use ($user) {
-                $q->where('zone_id', $user->zone_id);
-            });
         } elseif ($user->role === 'FLM') {
             $regions = $regions->where('id', $user->region_id);
-            $hqs = $hqs->where('region_id', $user->region_id);
         }
 
         $regions = $regions->get();
-        $hqs = $hqs->get();
 
-        return view('admin.dashboard', compact('zones', 'regions', 'hqs', 'designations'));
+        return view('admin.dashboard', compact('zones', 'regions'));
     }
 
     /**
@@ -66,13 +59,19 @@ class AdminController extends Controller
         if ($request->filled('region_id')) {
             $query->where('region_id', $request->region_id);
         }
-        if ($request->filled('hq_id')) {
-            $query->where('hq_id', $request->hq_id);
-        }
-        if ($request->filled('designation_id')) {
-            $query->whereHas('user', function ($q) use ($request) {
-                $q->where('designation_id', $request->designation_id);
-            });
+        if ($request->filled('fle_id')) {
+            $query->where('user_id', $request->fle_id);
+        } elseif ($request->filled('flm_id')) {
+            $flmId = $request->flm_id;
+            $fleIds = User::where('reporting_to_id', $flmId)->pluck('id');
+            $subId = $fleIds->push($flmId);
+            $query->whereIn('user_id', $subId);
+        } elseif ($request->filled('slm_id')) {
+            $slmId = $request->slm_id;
+            $flmIds = User::where('reporting_to_id', $slmId)->pluck('id');
+            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
+            $subId = $flmIds->merge($fleIds)->push($slmId);
+            $query->whereIn('user_id', $subId);
         }
         if ($request->filled('from_date')) {
             $query->where('date', '>=', $request->from_date);
@@ -139,13 +138,19 @@ class AdminController extends Controller
         if ($request->filled('region_id')) {
             $query->where('region_id', $request->region_id);
         }
-        if ($request->filled('hq_id')) {
-            $query->where('hq_id', $request->hq_id);
-        }
-        if ($request->filled('designation_id')) {
-            $query->whereHas('user', function ($q) use ($request) {
-                $q->where('designation_id', $request->designation_id);
-            });
+        if ($request->filled('fle_id')) {
+            $query->where('user_id', $request->fle_id);
+        } elseif ($request->filled('flm_id')) {
+            $flmId = $request->flm_id;
+            $fleIds = User::where('reporting_to_id', $flmId)->pluck('id');
+            $subId = $fleIds->push($flmId);
+            $query->whereIn('user_id', $subId);
+        } elseif ($request->filled('slm_id')) {
+            $slmId = $request->slm_id;
+            $flmIds = User::where('reporting_to_id', $slmId)->pluck('id');
+            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
+            $subId = $flmIds->merge($fleIds)->push($slmId);
+            $query->whereIn('user_id', $subId);
         }
         if ($request->filled('from_date')) {
             $query->where('date', '>=', $request->from_date);

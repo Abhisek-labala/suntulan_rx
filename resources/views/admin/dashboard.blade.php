@@ -63,26 +63,64 @@
                                     </div>
                                 </div>
 
+                                @if(in_array(auth()->user()->role, ['admin', 'TLM']))
                                 <div class="mb-3 row">
-                                    <label class="col-form-label col-md-2">HQ</label>
+                                    <label class="col-form-label col-md-2">SLM</label>
                                     <div class="col-md-10">
-                                        <select class="form-control" name="hq_id" id="hq_id">
+                                        <select class="form-control" name="slm_id" id="slm_id">
                                             <option value=""> -- Select -- </option>
-                                            @foreach($hqs as $hq)
-                                                <option value="{{ $hq->id }}">{{ $hq->name }}</option>
+                                            @foreach(\App\Models\User::where('role', 'SLM')->orderBy('name')->get() as $slm)
+                                                <option value="{{ $slm->id }}">{{ $slm->name }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
-
-                                @if(in_array(auth()->user()->role, ['admin', 'TLM']))
                                 <div class="mb-3 row">
-                                    <label class="col-form-label col-md-2">Designation</label>
+                                    <label class="col-form-label col-md-2">FLM</label>
                                     <div class="col-md-10">
-                                        <select class="form-control" name="designation_id" id="designation_id">
+                                        <select class="form-control" name="flm_id" id="flm_id">
                                             <option value=""> -- Select -- </option>
-                                            @foreach($designations as $dsg)
-                                                <option value="{{ $dsg->id }}">{{ $dsg->name }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3 row">
+                                    <label class="col-form-label col-md-2">FLE</label>
+                                    <div class="col-md-10">
+                                        <select class="form-control" name="fle_id" id="fle_id">
+                                            <option value=""> -- Select -- </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                @elseif(auth()->user()->role === 'SLM')
+                                <input type="hidden" name="slm_id" id="slm_id" value="{{ auth()->user()->id }}">
+                                <div class="mb-3 row">
+                                    <label class="col-form-label col-md-2">FLM</label>
+                                    <div class="col-md-10">
+                                        <select class="form-control" name="flm_id" id="flm_id">
+                                            <option value=""> -- Select -- </option>
+                                            @foreach(\App\Models\User::where('role', 'FLM')->where('reporting_to_id', auth()->user()->id)->orderBy('name')->get() as $flm)
+                                                <option value="{{ $flm->id }}">{{ $flm->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3 row">
+                                    <label class="col-form-label col-md-2">FLE</label>
+                                    <div class="col-md-10">
+                                        <select class="form-control" name="fle_id" id="fle_id">
+                                            <option value=""> -- Select -- </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                @elseif(auth()->user()->role === 'FLM')
+                                <input type="hidden" name="flm_id" id="flm_id" value="{{ auth()->user()->id }}">
+                                <div class="mb-3 row">
+                                    <label class="col-form-label col-md-2">FLE</label>
+                                    <div class="col-md-10">
+                                        <select class="form-control" name="fle_id" id="fle_id">
+                                            <option value=""> -- Select -- </option>
+                                            @foreach(\App\Models\User::whereIn('role', ['FLE', 'sales_team'])->where('reporting_to_id', auth()->user()->id)->orderBy('name')->get() as $fle)
+                                                <option value="{{ $fle->id }}">{{ $fle->name }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -140,10 +178,9 @@
                 data: function(d) {
                     d.from_date = $('#from_date').val();
                     d.to_date = $('#to_date').val();
-                    d.zone_id = $('#zone_id').val();
-                    d.region_id = $('#region_id').val();
-                    d.hq_id = $('#hq_id').val();
-                    d.designation_id = $('#designation_id').val();
+                    d.slm_id = $('#slm_id').val();
+                    d.flm_id = $('#flm_id').val();
+                    d.fle_id = $('#fle_id').val();
                 }
             },
             columns: [
@@ -169,7 +206,6 @@
         // Dependent Dropdowns
         function updateRegions(zoneId) {
             $('#region_id').html('<option value=""> -- Select -- </option>');
-            $('#hq_id').html('<option value=""> -- Select -- </option>');
             if (zoneId) {
                 $.ajax({
                     url: '/get-regions?zone_id=' + zoneId,
@@ -178,20 +214,57 @@
                         data.forEach(function(region) {
                             $('#region_id').append('<option value="' + region.id + '">' + region.name + '</option>');
                         });
+                        @if(in_array(auth()->user()->role, ['admin', 'TLM']))
+                        updateSlms(zoneId, null);
+                        @endif
                     }
                 });
             }
         }
 
-        function updateHqs(regionId) {
-            $('#hq_id').html('<option value=""> -- Select -- </option>');
-            if (regionId) {
+        function updateSlms(zoneId, regionId) {
+            var url = '/get-slms?';
+            if(zoneId) url += 'zone_id=' + zoneId + '&';
+            if(regionId) url += 'region_id=' + regionId;
+            $('#slm_id').html('<option value=""> -- Select -- </option>');
+            $('#flm_id').html('<option value=""> -- Select -- </option>');
+            $('#fle_id').html('<option value=""> -- Select -- </option>');
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(data) {
+                    data.forEach(function(slm) {
+                        $('#slm_id').append('<option value="' + slm.id + '">' + slm.name + '</option>');
+                    });
+                }
+            });
+        }
+
+        function updateFlms(slmId) {
+            $('#flm_id').html('<option value=""> -- Select -- </option>');
+            $('#fle_id').html('<option value=""> -- Select -- </option>');
+            if (slmId) {
                 $.ajax({
-                    url: '/get-hqs?region_id=' + regionId,
+                    url: '/get-flms?slm_id=' + slmId,
                     type: 'GET',
                     success: function(data) {
-                        data.forEach(function(hq) {
-                            $('#hq_id').append('<option value="' + hq.id + '">' + hq.name + '</option>');
+                        data.forEach(function(flm) {
+                            $('#flm_id').append('<option value="' + flm.id + '">' + flm.name + '</option>');
+                        });
+                    }
+                });
+            }
+        }
+
+        function updateFles(flmId) {
+            $('#fle_id').html('<option value=""> -- Select -- </option>');
+            if (flmId) {
+                $.ajax({
+                    url: '/get-fles?flm_id=' + flmId,
+                    type: 'GET',
+                    success: function(data) {
+                        data.forEach(function(fle) {
+                            $('#fle_id').append('<option value="' + fle.id + '">' + fle.name + '</option>');
                         });
                     }
                 });
@@ -203,7 +276,17 @@
         });
 
         $('#region_id').change(function() {
-            updateHqs($(this).val());
+            @if(in_array(auth()->user()->role, ['admin', 'TLM']))
+            updateSlms($('#zone_id').val(), $(this).val());
+            @endif
+        });
+
+        $('#slm_id').change(function() {
+            updateFlms($(this).val());
+        });
+
+        $('#flm_id').change(function() {
+            updateFles($(this).val());
         });
     });
 

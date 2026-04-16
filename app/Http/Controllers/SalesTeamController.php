@@ -44,6 +44,32 @@ class SalesTeamController extends Controller
         return response()->json($managers);
     }
 
+    public function getSlms(Request $request)
+    {
+        $query = \App\Models\User::where('role', 'SLM')->orderBy('name');
+        if($request->zone_id) $query->where('zone_id', $request->zone_id);
+        if($request->region_id) $query->where('region_id', $request->region_id);
+        return response()->json($query->get(['id', 'name']));
+    }
+
+    public function getFlms(Request $request)
+    {
+        $query = \App\Models\User::where('role', 'FLM')->orderBy('name');
+        if($request->slm_id) $query->where('reporting_to_id', $request->slm_id);
+        if($request->zone_id) $query->where('zone_id', $request->zone_id);
+        if($request->region_id) $query->where('region_id', $request->region_id);
+        return response()->json($query->get(['id', 'name']));
+    }
+
+    public function getFles(Request $request)
+    {
+        $query = \App\Models\User::whereIn('role', ['FLE', 'sales_team'])->orderBy('name');
+        if($request->flm_id) $query->where('reporting_to_id', $request->flm_id);
+        if($request->zone_id) $query->where('zone_id', $request->zone_id);
+        if($request->region_id) $query->where('region_id', $request->region_id);
+        return response()->json($query->get(['id', 'name']));
+    }
+
     public function index()
     {
         $staff = \App\Models\User::whereIn('role', ['sales_team', 'TLM', 'SLM', 'FLM', 'FLE'])->with(['zone', 'region', 'hq', 'designation', 'reportingTo'])->get();

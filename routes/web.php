@@ -28,6 +28,9 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/get-hqs', [SalesTeamController::class , 'getHqs']);
             Route::get('/get-designations', [SalesTeamController::class , 'getDesignations']);
             Route::get('/get-managers', [SalesTeamController::class , 'getManagers']);
+            Route::get('/get-slms', [SalesTeamController::class, 'getSlms']);
+            Route::get('/get-flms', [SalesTeamController::class, 'getFlms']);
+            Route::get('/get-fles', [SalesTeamController::class, 'getFles']);
 
             // Team Management
             Route::get('/admin/sales-team', [SalesTeamController::class , 'index'])->name('sales-team.index');
