@@ -260,6 +260,7 @@ class AdminController extends Controller
         ];
 
         $callback = function () use ($records, $fromLabel, $toLabel, $filterDescription) {
+            $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Admin RX Detailed Report']);
             fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
             fputcsv($handle, ['Filters: ' . $filterDescription]);
