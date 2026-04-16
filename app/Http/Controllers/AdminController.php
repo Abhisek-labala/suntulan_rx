@@ -248,7 +248,7 @@ class AdminController extends Controller
             $html .= '<tr class="total"><td colspan="7" style="text-align:right;">Total Sums</td>';
             $html .= '<td>' . $total . '</td>';
             $html .= '<td>' . $records->sum('noveltreat_count') . '</td>';
-            $html .= '<td>' . $records->sum('sematrinity_count') . '</td></tr>';
+            $html .= '<td>' . $records->sum('sematrinity_count') . '</td><td></td><td></td></tr>';
             $html .= '</table></body></html>';
 
             $pdf = Pdf::loadHTML($html)->setPaper('a4', 'landscape');
