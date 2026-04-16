@@ -55,18 +55,24 @@ class SalesTeamController extends Controller
     public function getFlms(Request $request)
     {
         $query = \App\Models\User::where('role', 'FLM')->orderBy('name');
-        if($request->slm_id) $query->where('reporting_to_id', $request->slm_id);
-        if($request->zone_id) $query->where('zone_id', $request->zone_id);
-        if($request->region_id) $query->where('region_id', $request->region_id);
+        if($request->slm_id) {
+            $query->where('reporting_to_id', $request->slm_id);
+        } else {
+            if($request->zone_id) $query->where('zone_id', $request->zone_id);
+            if($request->region_id) $query->where('region_id', $request->region_id);
+        }
         return response()->json($query->get(['id', 'name']));
     }
 
     public function getFles(Request $request)
     {
         $query = \App\Models\User::whereIn('role', ['FLE', 'sales_team'])->orderBy('name');
-        if($request->flm_id) $query->where('reporting_to_id', $request->flm_id);
-        if($request->zone_id) $query->where('zone_id', $request->zone_id);
-        if($request->region_id) $query->where('region_id', $request->region_id);
+        if($request->flm_id) {
+            $query->where('reporting_to_id', $request->flm_id);
+        } else {
+            if($request->zone_id) $query->where('zone_id', $request->zone_id);
+            if($request->region_id) $query->where('region_id', $request->region_id);
+        }
         return response()->json($query->get(['id', 'name']));
     }
 
