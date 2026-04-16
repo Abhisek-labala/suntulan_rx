@@ -215,7 +215,7 @@ class AdminController extends Controller
             $html .= '</tr></table>';
 
             $html .= '<table class="data-tbl">';
-            $html .= '<tr><th>DATE</th><th>PREFIX</th><th>EMPLOYEE NAME</th><th>FLM</th><th>SLM</th><th>REGION</th><th>ZONE</th><th>TOTAL RX</th><th>NOVELTREAT</th><th>SEMATRINITY</th></tr>';
+            $html .= '<tr><th>DATE</th><th>PREFIX</th><th>EMPLOYEE NAME</th><th>FLM</th><th>SLM</th><th>REGION</th><th>ZONE</th><th>TOTAL RX</th><th>NOVELTREAT</th><th>SEMATRINITY</th><th>CREATED ON</th><th>LAST UPDATED</th></tr>';
 
             $total = 0;
             foreach ($records as $rx) {
@@ -240,6 +240,8 @@ class AdminController extends Controller
                 $html .= '<td><strong>' . $rx->rx_count . '</strong></td>';
                 $html .= '<td>' . $rx->noveltreat_count . '</td>';
                 $html .= '<td>' . $rx->sematrinity_count . '</td>';
+                $html .= '<td>' . $rx->created_at->format('d-m-Y H:i:s') . '</td>';
+                $html .= '<td>' . $rx->updated_at->format('d-m-Y H:i:s') . '</td>';
                 $html .= '</tr>';
             }
 

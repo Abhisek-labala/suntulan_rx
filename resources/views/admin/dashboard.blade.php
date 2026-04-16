@@ -178,6 +178,8 @@
                 data: function(d) {
                     d.from_date = $('#from_date').val();
                     d.to_date = $('#to_date').val();
+                    d.zone_id = $('#zone_id').val();
+                    d.region_id = $('#region_id').val();
                     d.slm_id = $('#slm_id').val();
                     d.flm_id = $('#flm_id').val();
                     d.fle_id = $('#fle_id').val();
