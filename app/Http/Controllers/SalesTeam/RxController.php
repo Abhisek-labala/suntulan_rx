@@ -201,7 +201,7 @@ class RxController extends Controller
             $html .= '</tr></table>';
 
             $html .= '<table class="data-tbl">';
-            $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>SC Name</th><th>Total RX</th><th>Noveltreat</th><th>Sematrinity</th></tr>';
+            $html .= '<tr><th>Date</th><th>Zone</th><th>Region</th><th>HQ</th><th>Employee Name</th><th>Total RX</th><th>Noveltreat</th><th>Sematrinity</th></tr>';
             foreach ($rxDetails as $rx) {
                 $html .= '<tr>';
                 $html .= '<td>' . \Carbon\Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
@@ -236,7 +236,7 @@ class RxController extends Controller
             fputcsv($handle, ['Period: ' . $fromLabel . ' to ' . $toLabel]);
             fputcsv($handle, []);
             // Header
-            fputcsv($handle, ['Date', 'Zone', 'Region', 'HQ', 'SC Name', 'Total RX', 'Noveltreat', 'Sematrinity', 'Created On', 'Last Updated']);
+            fputcsv($handle, ['Date', 'Zone', 'Region', 'HQ', 'Employee Name', 'Total RX', 'Noveltreat', 'Sematrinity', 'Created On', 'Last Updated']);
             foreach ($rxDetails as $rx) {
                 fputcsv($handle, [
                     \Carbon\Carbon::parse($rx->date)->format('d-m-Y'),

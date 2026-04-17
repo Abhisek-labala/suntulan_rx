@@ -1,6 +1,10 @@
 @include('admin.header')
 <div class="main-wrapper">
+@if(in_array(auth()->user()->role, ['admin', 'TLM', 'SLM', 'FLM']))
+    @include('admin.sidebar')
+@else
     @include('sales_team.sidebar')
+@endif
     <div class="page-wrapper">
         <div class="content container-fluid">
             <!-- Page Header -->
@@ -44,7 +48,7 @@
                                     </div>
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
-                                            <label>SC Name</label>
+                                            <label>Employee Name</label>
                                             @if(count($subordinates) > 0)
                                                 <select name="sc_name" id="sc_name_select" class="form-control" required>
                                                     <option value="">Select FLE</option>
@@ -58,7 +62,7 @@
                                                     @endforeach
                                                 </select>
                                             @else
-                                                <input type="text" name="sc_name" class="form-control" placeholder="SC Name" required>
+                                                <input type="text" name="sc_name" class="form-control" placeholder="Employee Name" required>
                                             @endif
                                         </div>
                                     </div>
@@ -154,7 +158,7 @@
                                             <th>Zone</th>
                                             <th>Region</th>
                                             <th>HQ</th>
-                                            <th>SC Name</th>
+                                            <th>Employee Name</th>
                                             <th>Total RX</th>
                                             <th>Noveltreat</th>
                                             <th>Sematrinity</th>
@@ -230,7 +234,7 @@
                 @method('PUT')
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>SC Name</label>
+                        <label>Employee Name</label>
                         @if(count($subordinates) > 0)
                             <select name="sc_name" id="edit_sc_name" class="form-control" required>
                                 <option value="">Select FLE</option>

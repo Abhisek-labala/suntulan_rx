@@ -85,18 +85,24 @@ class AdminController extends Controller
         $data = $records->map(function ($rx) {
             $flm = '-';
             $slm = '-';
+            $displayName = $rx->user->name ?? 'Unknown';
 
-            if ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
+            if ($rx->user->role === 'FLM') {
+                $flm = $rx->user->name;
+                $slm = $rx->user->reportingTo->name ?? '-';
+                $displayName = $rx->sc_name; // Use selection from FLE dropdown
+            } elseif ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
                 $flm = $rx->user->reportingTo->name ?? '-';
                 $slm = $rx->user->reportingTo->reportingTo->name ?? '-';
-            } elseif ($rx->user->role === 'FLM') {
-                $slm = $rx->user->reportingTo->name ?? '-';
+                $displayName = $rx->user->name;
+            } elseif ($rx->user->role === 'SLM') {
+                 $slm = $rx->user->name;
             }
 
             return [
                 'date' => Carbon::parse($rx->date)->format('d-m-Y'),
                 'prefix' => $rx->user->prefix ?? '—',
-                'name' => $rx->user->name ?? 'Unknown',
+                'name' => $displayName,
                 'flm_name' => $flm,
                 'slm_name' => $slm,
                 'designation' => $rx->user->designation->name ?? '—',
@@ -221,18 +227,25 @@ class AdminController extends Controller
             foreach ($records as $rx) {
                 $flm = '-';
                 $slm = '-';
-                if ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
+                $displayName = $rx->user->name ?? '-';
+
+                if ($rx->user->role === 'FLM') {
+                    $flm = $rx->user->name;
+                    $slm = $rx->user->reportingTo->name ?? '-';
+                    $displayName = $rx->sc_name;
+                } elseif ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
                     $flm = $rx->user->reportingTo->name ?? '-';
                     $slm = $rx->user->reportingTo->reportingTo->name ?? '-';
-                } elseif ($rx->user->role === 'FLM') {
-                    $slm = $rx->user->reportingTo->name ?? '-';
+                    $displayName = $rx->user->name;
+                } elseif ($rx->user->role === 'SLM') {
+                    $slm = $rx->user->name;
                 }
 
                 $total += $rx->rx_count;
                 $html .= '<tr>';
                 $html .= '<td>' . Carbon::parse($rx->date)->format('d-m-Y') . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->user->prefix ?? '-') . '</td>';
-                $html .= '<td>' . htmlspecialchars($rx->user->name ?? '-') . '</td>';
+                $html .= '<td>' . htmlspecialchars($displayName) . '</td>';
                 $html .= '<td>' . htmlspecialchars($flm) . '</td>';
                 $html .= '<td>' . htmlspecialchars($slm) . '</td>';
                 $html .= '<td>' . htmlspecialchars($rx->region->name ?? ($rx->user->region->name ?? '-')) . '</td>';
@@ -273,18 +286,25 @@ class AdminController extends Controller
             foreach ($records as $rx) {
                 $flm = '-';
                 $slm = '-';
-                if ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
+                $displayName = $rx->user->name ?? '-';
+
+                if ($rx->user->role === 'FLM') {
+                    $flm = $rx->user->name;
+                    $slm = $rx->user->reportingTo->name ?? '-';
+                    $displayName = $rx->sc_name;
+                } elseif ($rx->user->role === 'sales_team' || $rx->user->role === 'FLE') {
                     $flm = $rx->user->reportingTo->name ?? '-';
                     $slm = $rx->user->reportingTo->reportingTo->name ?? '-';
-                } elseif ($rx->user->role === 'FLM') {
-                    $slm = $rx->user->reportingTo->name ?? '-';
+                    $displayName = $rx->user->name;
+                } elseif ($rx->user->role === 'SLM') {
+                    $slm = $rx->user->name;
                 }
 
                 $total += $rx->rx_count;
                 fputcsv($handle, [
                     Carbon::parse($rx->date)->format('d-m-Y'),
                     $rx->user->prefix ?? '-',
-                    $rx->user->name ?? '-',
+                    $displayName,
                     $flm,
                     $slm,
                     $rx->region->name ?? ($rx->user->region->name ?? '-'),

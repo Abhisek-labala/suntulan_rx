@@ -2,23 +2,23 @@
     <div class="sidebar-inner slimscroll">
         <div id="sidebar-menu" class="sidebar-menu">
             <ul>
-                <li>
+                <li class="{{ Request::routeIs('admin.dashboard') ? 'active' : '' }}">
                     <a href="{{ route('admin.dashboard') }}">
                         <i class="fa fa-home"></i> <span>Dashboard</span>
                     </a>
                 </li>
-                <li>
+                <li class="{{ Request::routeIs('admin.analytics') ? 'active' : '' }}">
                     <a href="{{ route('admin.analytics') }}">
                         <i class="fa fa-bar-chart"></i> <span>Analytics</span>
                     </a>
                 </li>
-                <li>
+                <li class="{{ Request::routeIs('rx.*') ? 'active' : '' }}">
                     <a href="{{ route('rx.index') }}">
                         <i class="fa fa-notes-medical"></i> <span>RX Details</span>
                     </a>
                 </li>
                 @if(in_array(auth()->user()->role, ['admin', 'TLM']))
-                <li>
+                <li class="{{ Request::routeIs('sales-team.*') ? 'active' : '' }}">
                     <a href="{{ route('sales-team.index') }}">
                         <i class="fa fa-users"></i> <span>Sales Team</span>
                     </a>
