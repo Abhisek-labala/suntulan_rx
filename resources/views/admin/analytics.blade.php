@@ -1,7 +1,7 @@
 @include('admin.header')
 
 <div class="main-wrapper">
-    @include('admin.Sidebar')
+    @include('admin.sidebar')
 
     <div class="page-wrapper">
         <div class="content container-fluid">

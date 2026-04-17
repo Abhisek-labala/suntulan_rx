@@ -1,7 +1,7 @@
 @include('admin.header');
 @section('content')
 <div class="main-wrapper">
-    @include('admin.Sidebar');
+    @include('admin.sidebar');
 
     <div class="page-wrapper" style="min-height: 653px;">
         <div class="content container-fluid">
