@@ -12,11 +12,13 @@
                         <i class="fa fa-bar-chart"></i> <span>Analytics</span>
                     </a>
                 </li>
+                @if(in_array(auth()->user()->role, ['FLM', 'admin']))
                 <li class="{{ Request::routeIs('rx.*') ? 'active' : '' }}">
                     <a href="{{ route('rx.index') }}">
                         <i class="fa fa-notes-medical"></i> <span>RX Details</span>
                     </a>
                 </li>
+                @endif
                 @if(in_array(auth()->user()->role, ['admin', 'TLM']))
                 <li class="{{ Request::routeIs('sales-team.*') ? 'active' : '' }}">
                     <a href="{{ route('sales-team.index') }}">

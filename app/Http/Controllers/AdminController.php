@@ -325,8 +325,6 @@ class AdminController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    public function analytics(Request $request)
-    {
         $user = auth()->user();
         
         // --- Metadata for filters ---
@@ -344,48 +342,71 @@ class AdminController extends Controller
         $regions = $regions->get();
         $hqs = $hqs->get();
 
-        // --- Data Filtering for Analytics (Reporting Hierarchy) ---
-        $baseUsers = User::whereIn('role', ['FLE', 'sales_team', 'FLM', 'SLM']);
-        if ($user->role === 'SLM') {
+        // --- Determine the hierarchy of Managers and FLEs ---
+        $allManagers = collect([$user->id]);
+        $targetFLEsQuery = User::whereIn('role', ['FLE', 'sales_team']);
+
+        if ($user->role === 'TLM') {
+            $slmIds = User::where('reporting_to_id', $user->id)->pluck('id');
+            $flmIds = User::whereIn('reporting_to_id', $slmIds)->pluck('id');
+            $allManagers = $allManagers->merge($slmIds)->merge($flmIds);
+            $targetFLEsQuery->whereIn('reporting_to_id', $flmIds);
+        } elseif ($user->role === 'SLM') {
             $flmIds = User::where('reporting_to_id', $user->id)->pluck('id');
-            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
-            $allSubIds = $flmIds->merge($fleIds)->push($user->id);
-            $baseUsers->whereIn('id', $allSubIds);
+            $allManagers = $allManagers->merge($flmIds);
+            $targetFLEsQuery->whereIn('reporting_to_id', $flmIds);
         } elseif ($user->role === 'FLM') {
-            $allSubIds = User::where('reporting_to_id', $user->id)->pluck('id')->push($user->id);
-            $baseUsers->whereIn('id', $allSubIds);
+            $targetFLEsQuery->where('reporting_to_id', $user->id);
+        } elseif ($user->role === 'admin') {
+            $allManagers = User::whereIn('role', ['admin', 'TLM', 'SLM', 'FLM'])->pluck('id');
+            $targetFLEsQuery = User::whereIn('role', ['FLE', 'sales_team']);
         }
         
-        // Filter by user selection
-        if ($request->filled('zone_id')) $baseUsers->where('zone_id', $request->zone_id);
-        if ($request->filled('region_id')) $baseUsers->where('region_id', $request->region_id);
-        if ($request->filled('hq_id')) $baseUsers->where('hq_id', $request->hq_id);
+        // Apply geography filters to target FLEs
+        if ($request->filled('zone_id')) $targetFLEsQuery->where('zone_id', $request->zone_id);
+        if ($request->filled('region_id')) $targetFLEsQuery->where('region_id', $request->region_id);
+        if ($request->filled('hq_id')) $targetFLEsQuery->where('hq_id', $request->hq_id);
 
-        $soIds = $baseUsers->pluck('id');
+        $allSOs = $targetFLEsQuery->with(['hq', 'zone', 'region'])->get();
+        $soNames = $allSOs->pluck('name')->toArray();
+        $soIds = $allSOs->pluck('id')->toArray();
 
         $yesterday = Carbon::yesterday()->format('Y-m-d');
         $startOfWeek = Carbon::now()->subDays(7)->format('Y-m-d');
         $startOfMonth = Carbon::now()->startOfMonth()->format('Y-m-d');
 
-        // Aggregated sums for each user
-        $stats = RxDetail::whereIn('user_id', $soIds)
+        // Aggregated sums for FLE performance from two sources:
+        // 1. Logged by managers for these FLE names
+        $managerStats = RxDetail::whereIn('user_id', $allManagers)
+            ->whereIn('sc_name', $soNames)
+            ->select('sc_name')
+            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as y_total", [$yesterday])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as w_total", [$startOfWeek])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as m_total", [$startOfMonth])
+            ->groupBy('sc_name')
+            ->get()
+            ->keyBy('sc_name');
+
+        // 2. Logged by FLEs themselves (legacy data)
+        $selfStats = RxDetail::whereIn('user_id', $soIds)
             ->select('user_id')
-            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as yesterday_total", [$yesterday])
-            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as week_total", [$startOfWeek])
-            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as mtd_total", [$startOfMonth])
+            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as y_total", [$yesterday])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as w_total", [$startOfWeek])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as m_total", [$startOfMonth])
             ->groupBy('user_id')
             ->get()
             ->keyBy('user_id');
 
-        $allSOs = $baseUsers->with(['hq', 'zone', 'region'])->get();
         $leaderboard = [];
         $lowPerformers = [];
 
         foreach ($allSOs as $so) {
-            $uStats = $stats[$so->id] ?? null;
-            $y = $uStats ? (int)$uStats->yesterday_total : 0;
-            $w = $uStats ? (int)$uStats->week_total : 0;
-            $m = $uStats ? (int)$uStats->mtd_total : 0;
+            $mX = $managerStats[$so->name] ?? null;
+            $sX = $selfStats[$so->id] ?? null;
+
+            $y = ($mX ? (int)$mX->y_total : 0) + ($sX ? (int)$sX->y_total : 0);
+            $w = ($mX ? (int)$mX->w_total : 0) + ($sX ? (int)$sX->w_total : 0);
+            $m = ($mX ? (int)$mX->m_total : 0) + ($sX ? (int)$sX->m_total : 0);
             
             $data = ['name' => $so->name, 'hq' => $so->hq->name ?? 'N/A', 'yesterday' => $y, 'week' => $w, 'mtd' => $m];
             if ($y >= 10) $leaderboard[] = $data;
@@ -394,24 +415,29 @@ class AdminController extends Controller
         usort($leaderboard, fn($a, $b) => $b['yesterday'] <=> $a['yesterday']);
         usort($lowPerformers, fn($a, $b) => $a['yesterday'] <=> $b['yesterday']);
 
-        // --- Chart Data ---
+        // --- Chart Data Filtering ---
+        // Combine records for charts: either logged by relevant managers for these FLEs, OR logged by FLEs themselves
+        $chartRxQuery = RxDetail::where(function($q) use ($allManagers, $soNames, $soIds) {
+                $q->where(function($q2) use ($allManagers, $soNames) {
+                    $q2->whereIn('user_id', $allManagers)->whereIn('sc_name', $soNames);
+                })->orWhereIn('user_id', $soIds);
+            });
+
         // 1. Zone Wise Bar Chart
-        $zoneStatsQuery = RxDetail::select('zone_id')
+        $zoneStatsQuery = (clone $chartRxQuery)->select('zone_id')
             ->selectRaw("SUM(rx_count) as total")
-            ->whereIn('user_id', $soIds)
             ->where('date', '>=', $startOfMonth)
             ->groupBy('zone_id');
         $zoneData = $zoneStatsQuery->with('zone')->get();
         $chartZones = ['labels' => $zoneData->pluck('zone.name'), 'values' => $zoneData->pluck('total')];
 
         // 2. Product Split (MTD)
-        $productSplit = RxDetail::whereIn('user_id', $soIds)
-            ->where('date', '>=', $startOfMonth)
+        $productSplit = (clone $chartRxQuery)->where('date', '>=', $startOfMonth)
             ->selectRaw("SUM(noveltreat_count) as nt, SUM(sematrinity_count) as st")
             ->first();
 
         // 3. Zone wise statistics (Table)
-        $zoneTableQuery = RxDetail::select('zone_id')
+        $zoneTableQuery = (clone $chartRxQuery)->select('zone_id')
             ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as yesterday_total", [$yesterday])
             ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as week_total", [$startOfWeek])
             ->groupBy('zone_id');
@@ -423,8 +449,7 @@ class AdminController extends Controller
 
         // 4. Daily Trend (Last 15 days)
         $trendStart = Carbon::now()->subDays(15)->format('Y-m-d');
-        $trendData = RxDetail::whereIn('user_id', $soIds)
-            ->where('date', '>=', $trendStart)
+        $trendData = (clone $chartRxQuery)->where('date', '>=', $trendStart)
             ->select('date')
             ->selectRaw("SUM(rx_count) as total")
             ->groupBy('date')
@@ -444,59 +469,85 @@ class AdminController extends Controller
     public function exportAnalytics(Request $request)
     {
         $user = auth()->user();
-        $baseUsers = User::whereIn('role', ['FLE', 'sales_team', 'FLM', 'SLM']);
-        if ($user->role === 'SLM') {
+        
+        // Determine Hierarchy
+        $allManagers = collect([$user->id]);
+        $targetFLEsQuery = User::whereIn('role', ['FLE', 'sales_team']);
+
+        if ($user->role === 'TLM') {
+            $slmIds = User::where('reporting_to_id', $user->id)->pluck('id');
+            $flmIds = User::whereIn('reporting_to_id', $slmIds)->pluck('id');
+            $allManagers = $allManagers->merge($slmIds)->merge($flmIds);
+            $targetFLEsQuery->whereIn('reporting_to_id', $flmIds);
+        } elseif ($user->role === 'SLM') {
             $flmIds = User::where('reporting_to_id', $user->id)->pluck('id');
-            $fleIds = User::whereIn('reporting_to_id', $flmIds)->pluck('id');
-            $allSubIds = $flmIds->merge($fleIds)->push($user->id);
-            $baseUsers->whereIn('id', $allSubIds);
+            $allManagers = $allManagers->merge($flmIds);
+            $targetFLEsQuery->whereIn('reporting_to_id', $flmIds);
         } elseif ($user->role === 'FLM') {
-            $allSubIds = User::where('reporting_to_id', $user->id)->pluck('id')->push($user->id);
-            $baseUsers->whereIn('id', $allSubIds);
+            $targetFLEsQuery->where('reporting_to_id', $user->id);
+        } elseif ($user->role === 'admin') {
+            $allManagers = User::whereIn('role', ['admin', 'TLM', 'SLM', 'FLM'])->pluck('id');
         }
 
-        if ($request->filled('zone_id')) $baseUsers->where('zone_id', $request->zone_id);
-        if ($request->filled('region_id')) $baseUsers->where('region_id', $request->region_id);
-        if ($request->filled('hq_id')) $baseUsers->where('hq_id', $request->hq_id);
+        if ($request->filled('zone_id')) $targetFLEsQuery->where('zone_id', $request->zone_id);
+        if ($request->filled('region_id')) $targetFLEsQuery->where('region_id', $request->region_id);
+        if ($request->filled('hq_id')) $targetFLEsQuery->where('hq_id', $request->hq_id);
 
-        $soIds = $baseUsers->pluck('id');
+        $allSOs = $targetFLEsQuery->with(['hq', 'zone', 'region'])->get();
+        $soNames = $allSOs->pluck('name')->toArray();
+        $soIds = $allSOs->pluck('id')->toArray();
+
         $yesterday = Carbon::yesterday()->format('Y-m-d');
         $startOfWeek = Carbon::now()->subDays(7)->format('Y-m-d');
         $startOfMonth = Carbon::now()->startOfMonth()->format('Y-m-d');
 
-        $stats = RxDetail::whereIn('user_id', $soIds)
+        $managerStats = RxDetail::whereIn('user_id', $allManagers)
+            ->whereIn('sc_name', $soNames)
+            ->select('sc_name')
+            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as y_total", [$yesterday])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as w_total", [$startOfWeek])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as m_total", [$startOfMonth])
+            ->groupBy('sc_name')
+            ->get()
+            ->keyBy('sc_name');
+
+        $selfStats = RxDetail::whereIn('user_id', $soIds)
             ->select('user_id')
-            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as yesterday_total", [$yesterday])
-            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as week_total", [$startOfWeek])
-            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as mtd_total", [$startOfMonth])
+            ->selectRaw("SUM(CASE WHEN date = ? THEN rx_count ELSE 0 END) as y_total", [$yesterday])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as w_total", [$startOfWeek])
+            ->selectRaw("SUM(CASE WHEN date >= ? THEN rx_count ELSE 0 END) as m_total", [$startOfMonth])
             ->groupBy('user_id')
             ->get()
             ->keyBy('user_id');
-
-        $allSOs = $baseUsers->with(['hq', 'zone', 'region'])->get();
 
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="Analytics_Report_'.date('Ymd').'.csv"',
         ];
 
-        $callback = function () use ($allSOs, $stats) {
+        $callback = function () use ($allSOs, $managerStats, $selfStats) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Analytics Performance Report']);
             fputcsv($handle, ['Generated On: ' . date('d-m-Y H:i')]);
             fputcsv($handle, []);
-            fputcsv($handle, ['SO Name', 'Zone', 'Region', 'HQ', 'Yesterday Total', 'Last 7 Days', 'MTD Total']);
+            fputcsv($handle, ['Employee Name', 'Zone', 'Region', 'HQ', 'Yesterday Total', 'Last 7 Days', 'MTD Total']);
 
             foreach ($allSOs as $so) {
-                $uS = $stats[$so->id] ?? null;
+                $mX = $managerStats[$so->name] ?? null;
+                $sX = $selfStats[$so->id] ?? null;
+
+                $y = ($mX ? (int)$mX->y_total : 0) + ($sX ? (int)$sX->y_total : 0);
+                $w = ($mX ? (int)$mX->w_total : 0) + ($sX ? (int)$sX->w_total : 0);
+                $m = ($mX ? (int)$mX->m_total : 0) + ($sX ? (int)$sX->m_total : 0);
+
                 fputcsv($handle, [
                     $so->name,
                     $so->zone->name ?? 'N/A',
                     $so->region->name ?? 'N/A',
                     $so->hq->name ?? 'N/A',
-                    $uS ? $uS->yesterday_total : 0,
-                    $uS ? $uS->week_total : 0,
-                    $uS ? $uS->mtd_total : 0,
+                    $y,
+                    $w,
+                    $m,
                 ]);
             }
             fclose($handle);
