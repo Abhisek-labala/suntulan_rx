@@ -21,7 +21,16 @@ class RxController extends Controller
         }
 
         $rxDetails = $query->with(['zone', 'region', 'hq'])->orderBy('date', 'desc')->get();
-        return view('sales_team.rx_details', compact('rxDetails', 'user'));
+
+        $subordinates = [];
+        if ($user->role === 'FLM') {
+            $subordinates = \App\Models\User::where('reporting_to_id', $user->id)
+                ->whereIn('role', ['FLE', 'sales_team'])
+                ->with(['zone', 'region', 'hq'])
+                ->get();
+        }
+
+        return view('sales_team.rx_details', compact('rxDetails', 'user', 'subordinates'));
     }
 
     public function store(Request $request)
@@ -39,6 +48,23 @@ class RxController extends Controller
             return redirect()->back()->with('error', 'Total RX count must be greater than 0.');
         }
 
+        // Default to logged-in user's territory
+        $zone_id = $user->zone_id;
+        $region_id = $user->region_id;
+        $hq_id = $user->hq_id;
+
+        // If FLM and they selected a subordinate from the dropdown, use their territory
+        if ($user->role === 'FLM') {
+            $subordinate = \App\Models\User::where('reporting_to_id', $user->id)
+                ->where('name', $request->sc_name)
+                ->first();
+            if ($subordinate) {
+                $zone_id = $subordinate->zone_id;
+                $region_id = $subordinate->region_id;
+                $hq_id = $subordinate->hq_id;
+            }
+        }
+
         // Prevention of duplicates for the same date and SC Name (case-insensitive)
         $exists = \App\Models\RxDetail::where('user_id', $user->id)
             ->where('date', $request->date)
@@ -52,9 +78,9 @@ class RxController extends Controller
 
         \App\Models\RxDetail::create(array_merge($request->all(), [
             'user_id' => $user->id,
-            'zone_id' => $user->zone_id,
-            'region_id' => $user->region_id,
-            'hq_id' => $user->hq_id,
+            'zone_id' => $zone_id,
+            'region_id' => $region_id,
+            'hq_id' => $hq_id,
             'rx_count' => $rx_count
         ]));
 
@@ -76,6 +102,23 @@ class RxController extends Controller
         }
 
         $user = auth()->user();
+
+        // Territory update for FLM editing subordinate records
+        $zone_id = $user->zone_id;
+        $region_id = $user->region_id;
+        $hq_id = $user->hq_id;
+
+        if ($user->role === 'FLM') {
+            $subordinate = \App\Models\User::where('reporting_to_id', $user->id)
+                ->where('name', $request->sc_name)
+                ->first();
+            if ($subordinate) {
+                $zone_id = $subordinate->zone_id;
+                $region_id = $subordinate->region_id;
+                $hq_id = $subordinate->hq_id;
+            }
+        }
+
         // Check for duplicate but exclude current record
         $exists = \App\Models\RxDetail::where('user_id', $user->id)
             ->where('date', $request->date)
@@ -88,7 +131,12 @@ class RxController extends Controller
         }
 
         $rx = \App\Models\RxDetail::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
-        $rx->update(array_merge($request->all(), ['rx_count' => $rx_count]));
+        $rx->update(array_merge($request->all(), [
+            'rx_count' => $rx_count,
+            'zone_id' => $zone_id,
+            'region_id' => $region_id,
+            'hq_id' => $hq_id,
+        ]));
 
         return redirect()->back()->with('success', 'RX Detail updated successfully');
     }

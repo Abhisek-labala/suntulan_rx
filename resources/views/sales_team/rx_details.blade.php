@@ -27,25 +27,39 @@
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>Zone</label>
-                                            <input type="text" class="form-control" value="{{ Auth::user()->zone->name ?? 'N/A' }}" readonly>
+                                            <input type="text" id="display_zone" class="form-control" value="{{ Auth::user()->zone->name ?? 'N/A' }}" readonly>
                                         </div>
                                     </div>
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>Region</label>
-                                            <input type="text" class="form-control" value="{{ Auth::user()->region->name ?? 'N/A' }}" readonly>
+                                            <input type="text" id="display_region" class="form-control" value="{{ Auth::user()->region->name ?? 'N/A' }}" readonly>
                                         </div>
                                     </div>
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>HQ</label>
-                                            <input type="text" class="form-control" value="{{ Auth::user()->hq->name ?? 'N/A' }}" readonly>
+                                            <input type="text" id="display_hq" class="form-control" value="{{ Auth::user()->hq->name ?? 'N/A' }}" readonly>
                                         </div>
                                     </div>
                                     <div class="col-md-2">
                                         <div class="form-group mb-0">
                                             <label>SC Name</label>
-                                            <input type="text" name="sc_name" class="form-control" placeholder="SC Name" required>
+                                            @if(count($subordinates) > 0)
+                                                <select name="sc_name" id="sc_name_select" class="form-control" required>
+                                                    <option value="">Select FLE</option>
+                                                    @foreach($subordinates as $sub)
+                                                        <option value="{{ $sub->name }}" 
+                                                                data-zone="{{ $sub->zone->name ?? 'N/A' }}" 
+                                                                data-region="{{ $sub->region->name ?? 'N/A' }}" 
+                                                                data-hq="{{ $sub->hq->name ?? 'N/A' }}">
+                                                            {{ $sub->name }} - {{ $sub->hq->name ?? 'N/A' }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            @else
+                                                <input type="text" name="sc_name" class="form-control" placeholder="SC Name" required>
+                                            @endif
                                         </div>
                                     </div>
                                     <div class="col-md-2">
@@ -217,7 +231,16 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label>SC Name</label>
-                        <input type="text" name="sc_name" id="edit_sc_name" class="form-control" required>
+                        @if(count($subordinates) > 0)
+                            <select name="sc_name" id="edit_sc_name" class="form-control" required>
+                                <option value="">Select FLE</option>
+                                @foreach($subordinates as $sub)
+                                    <option value="{{ $sub->name }}">{{ $sub->name }} - {{ $sub->hq->name ?? 'N/A' }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            <input type="text" name="sc_name" id="edit_sc_name" class="form-control" required>
+                        @endif
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -277,6 +300,20 @@ $(document).ready(function() {
         $('#edit_date').val($(this).data('date'));
         $('#editRXForm').attr('action', '/rx-details/' + $(this).data('id'));
         $('#editRXModal').modal('show');
+    });
+
+    // Territory update based on selected FLE (for FLM)
+    $('#sc_name_select').on('change', function() {
+        let selected = $(this).find('option:selected');
+        if (selected.val()) {
+            $('#display_zone').val(selected.data('zone'));
+            $('#display_region').val(selected.data('region'));
+            $('#display_hq').val(selected.data('hq'));
+        } else {
+            $('#display_zone').val("{{ Auth::user()->zone->name ?? 'N/A' }}");
+            $('#display_region').val("{{ Auth::user()->region->name ?? 'N/A' }}");
+            $('#display_hq').val("{{ Auth::user()->hq->name ?? 'N/A' }}");
+        }
     });
 });
 </script>
