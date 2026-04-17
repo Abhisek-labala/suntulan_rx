@@ -12,7 +12,7 @@
                         <i class="fa fa-bar-chart"></i> <span>Analytics</span>
                     </a>
                 </li>
-                @if(in_array(auth()->user()->role, ['FLM', 'admin']))
+                @if(auth()->user()->role === 'FLM')
                 <li class="{{ Request::routeIs('rx.*') ? 'active' : '' }}">
                     <a href="{{ route('rx.index') }}">
                         <i class="fa fa-notes-medical"></i> <span>RX Details</span>
