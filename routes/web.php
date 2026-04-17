@@ -66,7 +66,7 @@ Route::middleware(['auth'])->group(function () {
             }
             );
 
-            Route::middleware(['role:sales_team|FLE'])->group(function () {
+            Route::middleware(['role:sales_team|FLE|FLM|SLM|TLM|admin'])->group(function () {
             Route::get('/rx-details', [RxController::class , 'index'])->name('rx.index');
             Route::get('/rx-details/export', [RxController::class , 'export'])->name('rx.export');
             Route::post('/rx-details', [RxController::class , 'store'])->name('rx.store');

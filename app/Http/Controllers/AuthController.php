@@ -25,21 +25,30 @@ class AuthController extends Controller
             ->orWhere('employee_id', $identifier)
             ->first();
 
-        if ($userFound && \Illuminate\Support\Facades\Auth::attempt(['username' => $userFound->username, 'password' => $password])) {
-            $role = \Illuminate\Support\Facades\Auth::user()->role;
-            $redirect = '/';
-            
-            if (in_array($role, ['admin', 'TLM', 'SLM', 'FLM'])) {
-                $redirect = route('admin.dashboard');
-            } elseif (in_array($role, ['sales_team', 'FLE'])) {
-                $redirect = route('rx.index');
+        if ($userFound) {
+            if ($userFound->role === 'FLE'||$userFound->role === 'sales_team') {
+                if ($request->ajax()) {
+                    return response()->json(['errors' => ['username' => ['You Are Not Allowed To Login']]], 422);
+                }
+                return redirect()->back()->with('error', 'You Are Not Allowed To Login');
             }
 
-            if ($request->ajax()) {
-                return response()->json(['success' => true, 'redirect_to' => $redirect]);
-            }
+            if (\Illuminate\Support\Facades\Auth::attempt(['username' => $userFound->username, 'password' => $password])) {
+                $role = \Illuminate\Support\Facades\Auth::user()->role;
+                $redirect = '/';
+                
+                if (in_array($role, ['admin', 'TLM', 'SLM', 'FLM'])) {
+                    $redirect = route('admin.dashboard');
+                } elseif (in_array($role, ['sales_team'])) {
+                    $redirect = route('rx.index');
+                }
 
-            return redirect($redirect);
+                if ($request->ajax()) {
+                    return response()->json(['success' => true, 'redirect_to' => $redirect]);
+                }
+
+                return redirect($redirect);
+            }
         }
 
         if ($request->ajax()) {
