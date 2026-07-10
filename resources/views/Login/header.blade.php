@@ -33,4 +33,35 @@
     
     <!-- Google reCAPTCHA -->
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <style>
+        /* Footer Credit */
+.footer-credit {
+    position: fixed;
+    bottom: 12px;
+    right: 20px;
+    z-index: 9999;
+    font-size: 11px;
+    color: #777;
+    font-weight: 400;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.footer-credit a {
+    color: #AE3B26;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.footer-credit a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .footer-credit {
+        right: 10px;
+        bottom: 8px;
+        font-size: 10px;
+    }
+}
+    </style>
 </head>
